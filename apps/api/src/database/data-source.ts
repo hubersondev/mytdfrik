@@ -21,8 +21,11 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 import {
   AccountActivationToken,
   AuditLog,
+  Category,
   Organization,
   PasswordResetToken,
+  PriorityLevel,
+  Product,
   Role,
   Session,
   User,
@@ -57,8 +60,11 @@ export const buildDataSourceOptions = (
   entities: [
     AccountActivationToken,
     AuditLog,
+    Category,
     Organization,
     PasswordResetToken,
+    PriorityLevel,
+    Product,
     Role,
     Session,
     User,

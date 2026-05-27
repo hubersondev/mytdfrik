@@ -5,9 +5,11 @@ import { APP_GUARD } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { CatalogModule } from './catalog/catalog.module';
 import { configValidationSchema } from './config/config.schema';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -50,6 +52,8 @@ import { HealthModule } from './health/health.module';
     DatabaseModule,
     AuthModule,
     AuditModule,
+    UsersModule,
+    CatalogModule,
     HealthModule,
   ],
   providers: [
