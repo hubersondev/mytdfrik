@@ -1,17 +1,21 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
+import { Public } from '../auth/decorators/public.decorator';
+import { SkipAudit } from '../audit/audit-action.decorator';
 
 @ApiTags('health')
 @Controller({ path: 'health', version: '1' })
 export class HealthController {
   /**
    * Endpoint de sonde publique — utilisé par les checks d'infrastructure et la CI.
-   * Pas de rate limiting (sondes fréquentes).
+   * Pas d'auth requise, pas de rate limiting, pas d'audit (sondes fréquentes).
    * CDC §9.11 [EXG-09-092].
    */
   @Get()
+  @Public()
   @SkipThrottle()
+  @SkipAudit()
   @ApiOperation({ summary: 'Vérification de disponibilité du service' })
   @ApiOkResponse({
     schema: {

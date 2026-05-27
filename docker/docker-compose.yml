@@ -58,7 +58,9 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - '5432:5432' # Exposé en dev pour outils de DB
+      # Port hôte configurable (POSTGRES_HOST_PORT) pour éviter les conflits avec
+      # un Postgres déjà installé sur la machine. Par défaut : 5432.
+      - '${POSTGRES_HOST_PORT:-5432}:5432'
     networks:
       - mytdfrik
 
@@ -76,7 +78,10 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - '6379:6379' # Exposé en dev pour outils Redis
+      # Port hôte configurable (REDIS_HOST_PORT) pour éviter les conflits avec
+      # un Redis déjà installé sur la machine. Par défaut : 6379.
+      # Le service api accède toujours à 'redis:6379' via le réseau interne Docker.
+      - '${REDIS_HOST_PORT:-6379}:6379'
     networks:
       - mytdfrik
 
