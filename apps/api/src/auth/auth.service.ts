@@ -208,9 +208,12 @@ export class AuthService {
    * n'existe pas, pour empêcher l'énumération (CDC §10.2.1).
    * Retourne le secret pour permettre l'envoi par courriel par l'appelant.
    */
-  async requestPasswordReset(
-    email: string,
-  ): Promise<{ token: string; userId: string } | null> {
+  async requestPasswordReset(email: string): Promise<{
+    token: string;
+    userId: string;
+    email: string;
+    firstName: string;
+  } | null> {
     const user = await this.findUserByEmail(email);
     if (!user || !user.isActive || user.deletedAt) {
       return null;
@@ -225,7 +228,12 @@ export class AuthService {
       expiresAt: new Date(Date.now() + ttl * 1000),
     });
 
-    return { token, userId: user.id };
+    return {
+      token,
+      userId: user.id,
+      email: user.email,
+      firstName: user.firstName,
+    };
   }
 
   async confirmPasswordReset(

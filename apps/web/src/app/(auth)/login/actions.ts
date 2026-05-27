@@ -64,5 +64,11 @@ export async function loginAction(
     user: data.user,
   });
 
+  // Routage post-login en fonction du rôle. Les rôles internes
+  // (GESTIONNAIRE/RESPONSABLE/DG) atterrissent sur /admin en attendant leurs
+  // propres espaces dédiés livrés dans les sprints suivants.
+  if (data.user.roleId === 'CLIENT') {
+    redirect('/client');
+  }
   redirect('/admin');
 }

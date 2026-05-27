@@ -23,10 +23,20 @@ export class Organization {
   @Column({ type: 'varchar', length: 200 })
   name!: string;
 
-  @Column({ type: 'varchar', length: 80, nullable: true })
+  @Column({
+    name: 'external_reference',
+    type: 'varchar',
+    length: 80,
+    nullable: true,
+  })
   externalReference!: string | null;
 
-  @Column({ type: 'varchar', length: 200, nullable: true })
+  @Column({
+    name: 'address_line',
+    type: 'varchar',
+    length: 200,
+    nullable: true,
+  })
   addressLine!: string | null;
 
   @Column({ type: 'varchar', length: 120, nullable: true })
@@ -35,21 +45,26 @@ export class Organization {
   @Column({ type: 'varchar', length: 80, nullable: true })
   country!: string | null;
 
-  @Column({ type: 'varchar', length: 254, nullable: true })
+  @Column({
+    name: 'primary_contact_email',
+    type: 'varchar',
+    length: 254,
+    nullable: true,
+  })
   primaryContactEmail!: string | null;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive!: boolean;
 
   @OneToMany(() => User, (user) => user.organization)
   users!: User[];
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 
-  @DeleteDateColumn({ type: 'timestamptz', nullable: true })
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
   deletedAt!: Date | null;
 }

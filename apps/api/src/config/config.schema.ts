@@ -48,6 +48,16 @@ export const configValidationSchema = Joi.object({
   // Sentry (optionnel en dev, requis en production)
   SENTRY_DSN: Joi.string().uri().optional().allow(''),
 
+  // Email transactionnel (CDC §7.4)
+  SENDGRID_API_KEY: Joi.string().optional().allow(''),
+  MAIL_FROM_ADDRESS: Joi.string()
+    .email()
+    .default('notifications@techdifrik.com'),
+  MAIL_FROM_NAME: Joi.string().default('MyTDFRIK · TECHDIFRIK'),
+
+  // URL publique du front (sert à construire les liens dans les courriels)
+  APP_WEB_BASE_URL: Joi.string().uri().default('http://localhost:3001'),
+
   // Bootstrap : compte admin de démarrage (utilisé par les seeds)
   ADMIN_BOOTSTRAP_EMAIL: Joi.string().email().optional(),
   ADMIN_BOOTSTRAP_PASSWORD: Joi.string().min(12).optional(),
