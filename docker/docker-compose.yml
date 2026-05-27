@@ -1,0 +1,147 @@
+# Docker Compose — environnement de développement local MyTDFRIK.
+# Tous les services sur le réseau interne 'mytdfrik'. Seul Traefik expose des ports.
+#
+# Usage :
+#   docker compose -f docker/docker-compose.yml up -d
+#   docker compose -f docker/docker-compose.yml logs -f api
+#   docker compose -f docker/docker-compose.yml down
+
+name: mytdfrik
+
+networks:
+  mytdfrik:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  clamav_data:
+
+services:
+  # -------------------------- Reverse proxy --------------------------
+  traefik:
+    image: traefik:v3.2
+    container_name: mytdfrik-traefik
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=mytdfrik_mytdfrik
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --log.level=INFO
+    ports:
+      - '80:80'
+      - '443:443'
+      - '8080:8080' # Dashboard Traefik (dev uniquement)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - mytdfrik
+
+  # -------------------------- Base de données --------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: mytdfrik-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mytdfrik}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-mytdfrik}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-mytdfrik}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - '5432:5432' # Exposé en dev pour outils de DB
+    networks:
+      - mytdfrik
+
+  # -------------------------- Cache / file de messages --------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: mytdfrik-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - '6379:6379' # Exposé en dev pour outils Redis
+    networks:
+      - mytdfrik
+
+  # -------------------------- Antivirus pour pièces jointes --------------------------
+  clamav:
+    image: clamav/clamav:1.4
+    container_name: mytdfrik-clamav
+    restart: unless-stopped
+    volumes:
+      - clamav_data:/var/lib/clamav
+    healthcheck:
+      test: ['CMD', 'clamdcheck.sh']
+      interval: 60s
+      timeout: 30s
+      retries: 5
+      start_period: 6m # Premier téléchargement des signatures ~5 min
+    networks:
+      - mytdfrik
+
+  # -------------------------- Backend NestJS --------------------------
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    container_name: mytdfrik-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      LOG_LEVEL: debug
+      CORS_ORIGINS: http://web.localhost,http://localhost:3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mytdfrik}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-mytdfrik}
+      REDIS_URL: redis://redis:6379
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: 3310
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.api.rule=Host(`api.localhost`)
+      - traefik.http.routers.api.entrypoints=web
+      - traefik.http.services.api.loadbalancer.server.port=3000
+    networks:
+      - mytdfrik
+
+  # -------------------------- Frontend Next.js --------------------------
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    container_name: mytdfrik-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      NEXT_PUBLIC_API_URL: http://api.localhost/api/v1
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.web.rule=Host(`web.localhost`) || Host(`localhost`)
+      - traefik.http.routers.web.entrypoints=web
+      - traefik.http.services.web.loadbalancer.server.port=3001
+    networks:
+      - mytdfrik

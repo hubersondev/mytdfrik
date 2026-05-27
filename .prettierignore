@@ -1,0 +1,19 @@
+node_modules
+dist
+.next
+.turbo
+build
+coverage
+pnpm-lock.yaml
+*.min.js
+*.min.css
+Note_Presentation_MyTDFRIK.docx
+
+# Documentation rédigée manuellement — préserver la mise en page
+docs/cdc/**
+docs/adr/**
+docs/retrospectives/**
+
+# Fichiers générés par Next.js
+apps/web/AGENTS.md
+apps/web/CLAUDE.md

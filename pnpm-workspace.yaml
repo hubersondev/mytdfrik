@@ -1,0 +1,15 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Dépendances dont les scripts d'installation (postinstall) sont autorisés.
+# Toute dépendance non listée ici aura ses scripts natifs bloqués (sécurité supply chain).
+allowBuilds:
+  '@nestjs/core': true
+  '@swc/core': true
+  bcrypt: true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+  # Bloqué : tracker analytics tiers
+  '@scarf/scarf': false
