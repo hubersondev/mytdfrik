@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { ApiHealthBadge } from '@/components/api-health-badge';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
   return (
@@ -18,8 +20,12 @@ export default function Home() {
 
       <ApiHealthBadge />
 
+      <Button asChild>
+        <Link href="/login">Accéder à la plateforme</Link>
+      </Button>
+
       <footer className="text-xs text-zinc-500 dark:text-zinc-400">
-        Sprint 0 — Setup &amp; socle · Référence projet CDC v0.3.1
+        Sprint 2 · Catalogue &amp; Administration · Référence projet CDC v0.3.1
       </footer>
     </main>
   );
