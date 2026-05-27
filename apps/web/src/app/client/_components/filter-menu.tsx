@@ -13,11 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import {
-  BUCKET_ORDER,
-  FILTER_BUCKETS,
-  type FilterBucketKey,
-} from './filter-buckets';
+import { BUCKET_ORDER, FILTER_BUCKETS, type FilterBucketKey } from './filter-buckets';
 
 interface Props {
   /** Bucket actuellement actif (résolu côté serveur depuis searchParams). */

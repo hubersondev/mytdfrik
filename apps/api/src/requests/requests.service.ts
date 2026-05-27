@@ -226,8 +226,12 @@ export class RequestsService {
     // Le périmètre par responsable affecté arrivera au S4 via un filtre dédié.
 
     if (params.status) {
-      const statuses = Array.isArray(params.status) ? params.status : [params.status];
-      const cleaned = statuses.filter((s) => REQUEST_STATUS_VALUES.includes(s as RequestStatus));
+      const statuses = Array.isArray(params.status)
+        ? params.status
+        : [params.status];
+      const cleaned = statuses.filter((s) =>
+        REQUEST_STATUS_VALUES.includes(s as RequestStatus),
+      );
       if (cleaned.length === 1) {
         qb.andWhere('r.status = :status', { status: cleaned[0] });
       } else if (cleaned.length > 1) {

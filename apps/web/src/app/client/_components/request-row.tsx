@@ -25,15 +25,30 @@ import { cn } from '@/lib/utils';
  * catégorie reste affiché à droite de l'icône, donc rien n'est perdu.
  */
 const CATEGORY_VISUAL: Record<string, { icon: LucideIcon; tone: string }> = {
-  BUG_LOGICIEL: { icon: Bug, tone: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' },
-  BUG_MATERIEL: { icon: Wrench, tone: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' },
-  PANNE_SYSTEME: { icon: Zap, tone: 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300' },
-  DEMANDE_INFO: { icon: HelpCircle, tone: 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300' },
+  BUG_LOGICIEL: {
+    icon: Bug,
+    tone: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300',
+  },
+  BUG_MATERIEL: {
+    icon: Wrench,
+    tone: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300',
+  },
+  PANNE_SYSTEME: {
+    icon: Zap,
+    tone: 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300',
+  },
+  DEMANDE_INFO: {
+    icon: HelpCircle,
+    tone: 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300',
+  },
   EVOLUTION_FONCTIONNELLE: {
     icon: Sparkles,
     tone: 'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300',
   },
-  RECLAMATION: { icon: Flag, tone: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' },
+  RECLAMATION: {
+    icon: Flag,
+    tone: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300',
+  },
 };
 
 const DEFAULT_VISUAL = {
@@ -57,12 +72,7 @@ export function RequestRow({ request, assignee }: Props) {
         href={`/client/requests/${request.publicReference}`}
         className="group flex items-center gap-4 px-5 py-3 transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-900/40"
       >
-        <span
-          className={cn(
-            'grid h-10 w-10 shrink-0 place-items-center rounded-lg',
-            visual.tone,
-          )}
-        >
+        <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-lg', visual.tone)}>
           <Icon className="h-4 w-4" />
         </span>
 

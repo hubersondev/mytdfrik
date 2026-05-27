@@ -240,7 +240,8 @@ function WelcomeHero({
         </span>
         {waitingClientCount > 0 ? (
           <>
-            {' '}et{' '}
+            {' '}
+            et{' '}
             <span className="text-sand-300">
               {waitingClientCount} réponse{waitingClientCount > 1 ? 's' : ''} de votre interlocuteur
             </span>

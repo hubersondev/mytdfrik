@@ -184,8 +184,7 @@ export function formatRelativeTime(input: string | Date, now: Date = new Date())
   if (diffMin < 1) return "à l'instant";
   if (diffMin < 60) return `Il y a ${diffMin} min`;
 
-  const startOfDay = (d: Date) =>
-    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const diffDays = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000);
   const hhmm = new Intl.DateTimeFormat('fr-FR', {
     hour: '2-digit',

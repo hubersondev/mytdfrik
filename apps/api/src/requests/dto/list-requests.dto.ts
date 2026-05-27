@@ -33,7 +33,7 @@ export class ListRequestsQueryDto extends CursorPaginationDto {
     required: false,
     enum: SORT_KEYS,
     description:
-      "Ordre de tri. `activity_desc` (défaut, par activité récente), `created_desc`/`created_asc` (date de soumission), `priority_asc` (P0 → P4).",
+      'Ordre de tri. `activity_desc` (défaut, par activité récente), `created_desc`/`created_asc` (date de soumission), `priority_asc` (P0 → P4).',
   })
   @IsOptional()
   @IsEnum(SORT_KEYS)

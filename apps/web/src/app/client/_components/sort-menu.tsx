@@ -13,12 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import {
-  DEFAULT_SORT,
-  SORT_OPTIONS,
-  SORT_ORDER,
-  type SortKey,
-} from './sort-options';
+import { DEFAULT_SORT, SORT_OPTIONS, SORT_ORDER, type SortKey } from './sort-options';
 
 interface Props {
   current: SortKey;

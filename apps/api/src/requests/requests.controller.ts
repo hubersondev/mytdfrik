@@ -59,7 +59,10 @@ export class RequestsController {
     summary:
       'Liste paginée des demandes (Client : ses propres demandes ; rôles internes : toutes)',
   })
-  list(@CurrentUser() user: AuthenticatedUser, @Query() query: ListRequestsQueryDto) {
+  list(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: ListRequestsQueryDto,
+  ) {
     // Le paramètre `status` accepte soit un statut unique soit une liste
     // séparée par des virgules pour matcher les "buckets" affichés côté UI
     // (ex. "Ouvertes" = NOUVELLE,EN_ATTENTE_AFFECTATION,AFFECTEE,EN_COURS).
