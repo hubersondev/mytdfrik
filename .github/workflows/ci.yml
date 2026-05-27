@@ -76,6 +76,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Compute lowercase repo path
+        id: repo
+        run: echo "lc=${REPO,,}" >> "$GITHUB_OUTPUT"
+        env:
+          REPO: ${{ github.repository }}
+
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -94,8 +100,8 @@ jobs:
           file: ./apps/api/Dockerfile
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: |
-            ghcr.io/${{ github.repository }}/api:latest
-            ghcr.io/${{ github.repository }}/api:${{ github.sha }}
+            ghcr.io/${{ steps.repo.outputs.lc }}/api:latest
+            ghcr.io/${{ steps.repo.outputs.lc }}/api:${{ github.sha }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
@@ -106,7 +112,7 @@ jobs:
           file: ./apps/web/Dockerfile
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: |
-            ghcr.io/${{ github.repository }}/web:latest
-            ghcr.io/${{ github.repository }}/web:${{ github.sha }}
+            ghcr.io/${{ steps.repo.outputs.lc }}/web:latest
+            ghcr.io/${{ steps.repo.outputs.lc }}/web:${{ github.sha }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
