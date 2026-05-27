@@ -1,45 +1,45 @@
 # syntax=docker/dockerfile:1.7
 
-# ---------- Étape 1 : build ----------
-FROM node:22-alpine AS builder
-
+# ---------- Étape 1 : base ----------
+FROM node:22-alpine AS base
 RUN corepack enable
-
 WORKDIR /repo
 
-# Manifestes du workspace racine
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* tsconfig.base.json ./
-COPY turbo.json ./
+# ---------- Étape 2 : installation des dépendances (full, dev incluses) ----------
+FROM base AS deps
 
-# Manifeste de l'app
+# Manifestes du workspace racine (cache-friendly)
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY tsconfig.base.json turbo.json ./
+
+# Manifeste de l'app cible
 COPY apps/api/package.json apps/api/
 
-# Installer toutes les dépendances du workspace (cache friendly)
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+    pnpm install --frozen-lockfile --filter @mytdfrik/api...
 
-# Sources et build
+# ---------- Étape 3 : build ----------
+FROM deps AS builder
+
 COPY apps/api ./apps/api
-WORKDIR /repo/apps/api
-RUN pnpm build
+RUN pnpm --filter @mytdfrik/api build
 
-# Prune des devDependencies pour l'image finale
-WORKDIR /repo
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm prune --prod --filter @mytdfrik/api
+# ---------- Étape 4 : extraction du déploiement (deps prod uniquement) ----------
+FROM builder AS deploy
+RUN pnpm deploy --filter=@mytdfrik/api --prod /deploy
 
-# ---------- Étape 2 : runtime ----------
+# ---------- Étape 5 : runtime ----------
 FROM node:22-alpine AS runtime
 
 ENV NODE_ENV=production
 WORKDIR /app
 
-# Utilisateur non root (sécurité)
+# Utilisateur non root
 RUN addgroup -S app && adduser -S app -G app
 
-COPY --from=builder --chown=app:app /repo/apps/api/dist ./dist
-COPY --from=builder --chown=app:app /repo/apps/api/package.json ./
-COPY --from=builder --chown=app:app /repo/node_modules ./node_modules
+COPY --from=deploy --chown=app:app /deploy/dist ./dist
+COPY --from=deploy --chown=app:app /deploy/node_modules ./node_modules
+COPY --from=deploy --chown=app:app /deploy/package.json ./
 
 USER app
 
