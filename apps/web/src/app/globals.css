@@ -1,26 +1,69 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/*
+ * Charte graphique TECHDIFRIK (extraite du logo officiel) :
+ *   - brand-500 = orange #EE7B0E (mot "TECH", points connecteurs)
+ *   - leaf-500  = vert #0F8A33   (mot "DIFRIK", contour Afrique)
+ *   - sand-500  = jaune #F5C518  (intérieur Afrique)
+ *
+ * Le neutre (zinc) reste la base de l'UI. Les couleurs brand sont utilisées
+ * pour les éléments identitaires : logos, badges marketing, CTA primaire,
+ * highlights de hover. Les couleurs sémantiques (emerald = succès, rose = danger,
+ * amber = warning) restent indépendantes pour ne pas surcharger la palette
+ * d'accent quand l'information à faire passer est fonctionnelle.
+ *
+ * Toutes les nuances sont conçues pour avoir un contraste AA minimum sur le
+ * fond opposé (zinc-50 / zinc-950) — vérifiées sur les usages courants.
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* ---- TECHDIFRIK Orange (mot "TECH" du logo) ---- */
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-200: #fed7aa;
+  --color-brand-300: #fdba74;
+  --color-brand-400: #fb923c;
+  --color-brand-500: #ee7b0e;
+  --color-brand-600: #d4630c;
+  --color-brand-700: #b15009;
+  --color-brand-800: #8d4109;
+  --color-brand-900: #71370a;
+  --color-brand-950: #421b04;
+
+  /* ---- TECHDIFRIK Vert (mot "DIFRIK" et silhouette Afrique) ---- */
+  --color-leaf-50: #f0fdf4;
+  --color-leaf-100: #dcfce7;
+  --color-leaf-200: #bbf7d0;
+  --color-leaf-300: #86efac;
+  --color-leaf-400: #4ade80;
+  --color-leaf-500: #1aa942;
+  --color-leaf-600: #0f8a33;
+  --color-leaf-700: #0d6e2a;
+  --color-leaf-800: #0d5723;
+  --color-leaf-900: #0c481f;
+  --color-leaf-950: #052a10;
+
+  /* ---- TECHDIFRIK Or (intérieur silhouette Afrique) ---- */
+  /* sand-50 sert de fond crème principal en mode clair — ton ivoire bien visible. */
+  --color-sand-50: #f7f0e0;
+  --color-sand-100: #f0e6c9;
+  --color-sand-200: #fde68a;
+  --color-sand-300: #fcd34d;
+  --color-sand-400: #fbbf24;
+  --color-sand-500: #f5c518;
+  --color-sand-600: #d4a30a;
+  --color-sand-700: #ab800b;
+  --color-sand-800: #886611;
+  --color-sand-900: #735514;
+  --color-sand-950: #432f05;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* La classe .dark est positionnée sur <html> côté serveur via `lib/theme.ts`.
+ * On évite ainsi tout flash de thème (FOUC) et toute injection de <script>. */
+@custom-variant dark (&:where(.dark, .dark *));
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
