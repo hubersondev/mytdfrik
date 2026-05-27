@@ -1,25 +1,23 @@
 # syntax=docker/dockerfile:1.7
 
-# ---------- Étape 1 : dépendances ----------
-FROM node:22-alpine AS deps
-
+# ---------- Étape 1 : base ----------
+FROM node:22-alpine AS base
 RUN corepack enable
 WORKDIR /repo
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+# ---------- Étape 2 : installation des dépendances ----------
+FROM base AS deps
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY tsconfig.base.json turbo.json ./
 COPY apps/web/package.json apps/web/
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --filter @mytdfrik/web...
 
-# ---------- Étape 2 : build ----------
-FROM node:22-alpine AS builder
+# ---------- Étape 3 : build (hérite des deps, garde apps/web/node_modules) ----------
+FROM deps AS builder
 
-RUN corepack enable
-WORKDIR /repo
-
-COPY --from=deps /repo/node_modules ./node_modules
-COPY package.json pnpm-workspace.yaml tsconfig.base.json turbo.json ./
 COPY apps/web ./apps/web
 
 WORKDIR /repo/apps/web
@@ -28,18 +26,19 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN pnpm build
 
-# ---------- Étape 3 : runtime ----------
+# ---------- Étape 4 : runtime (Next.js standalone output) ----------
 FROM node:22-alpine AS runtime
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3001
+ENV HOSTNAME=0.0.0.0
 
 WORKDIR /app
 
 RUN addgroup -S app && adduser -S app -G app
 
-# Next.js produit un build standalone avec ses propres node_modules dans .next/standalone
+# Next.js standalone produit la structure monorepo : apps/web/server.js + node_modules adjacents.
 COPY --from=builder --chown=app:app /repo/apps/web/.next/standalone ./
 COPY --from=builder --chown=app:app /repo/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=app:app /repo/apps/web/public ./apps/web/public
