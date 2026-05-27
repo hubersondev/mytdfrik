@@ -26,7 +26,10 @@ RUN pnpm --filter @mytdfrik/api build
 
 # ---------- Étape 4 : extraction du déploiement (deps prod uniquement) ----------
 FROM builder AS deploy
-RUN pnpm deploy --filter=@mytdfrik/api --prod /deploy
+# --legacy : comportement pré-v10. Adapté tant qu'aucun package interne (@mytdfrik/*)
+# n'est consommé par l'API. À remplacer par 'inject-workspace-packages: true' dans
+# pnpm-workspace.yaml quand le premier package interne sera introduit (S3).
+RUN pnpm deploy --filter=@mytdfrik/api --prod --legacy /deploy
 
 # ---------- Étape 5 : runtime ----------
 FROM node:22-alpine AS runtime
