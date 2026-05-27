@@ -9,6 +9,8 @@ import { CatalogModule } from './catalog/catalog.module';
 import { configValidationSchema } from './config/config.schema';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
+import { MailModule } from './mail/mail.module';
+import { RequestsModule } from './requests/requests.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -50,10 +52,12 @@ import { UsersModule } from './users/users.module';
       },
     ]),
     DatabaseModule,
+    MailModule,
     AuthModule,
     AuditModule,
     UsersModule,
     CatalogModule,
+    RequestsModule,
     HealthModule,
   ],
   providers: [

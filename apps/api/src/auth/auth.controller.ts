@@ -7,9 +7,11 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
+import { MailService } from '../mail/mail.service';
 import { AuthService } from './auth.service';
 import type { AuthenticatedUser } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -27,7 +29,11 @@ import { RefreshDto } from './dto/refresh.dto';
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly mail: MailService,
+    private readonly config: ConfigService,
+  ) {}
 
   @Public()
   @Post('login')
@@ -103,10 +109,24 @@ export class AuthController {
   ): Promise<void> {
     const result = await this.auth.requestPasswordReset(dto.email);
     if (result) {
-      // TODO S3 : envoyer le courriel SendGrid avec le token (gabarit MOT_DE_PASSE_REINITIALISATION_LIEN).
-      this.logger.log(
-        `[DEV] Token de réinit pour user ${result.userId} : ${result.token} (à envoyer par email en S3)`,
-      );
+      const baseUrl = this.config
+        .get<string>('APP_WEB_BASE_URL', 'http://localhost:3001')
+        .replace(/\/$/, '');
+      void this.mail
+        .send({
+          to: result.email,
+          template: 'MOT_DE_PASSE_REINITIALISATION_LIEN',
+          variables: {
+            first_name: result.firstName,
+            reset_url: `${baseUrl}/reset-password?token=${encodeURIComponent(result.token)}`,
+          },
+        })
+        .catch((error) => {
+          this.logger.error(
+            `Échec envoi email de réinitialisation pour ${result.email}`,
+            error as Error,
+          );
+        });
     }
   }
 
