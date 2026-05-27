@@ -1,4 +1,21 @@
 import 'reflect-metadata';
+// Charge le fichier .env le plus proche (apps/api/.env quand on lance pnpm depuis apps/api,
+// puis la racine du monorepo en repli). Indispensable pour les commandes CLI TypeORM qui
+// exécutent ce module sans passer par NestJS ConfigModule.
+import * as dotenv from 'dotenv';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+for (const candidate of [
+  resolve(process.cwd(), '.env'),
+  resolve(process.cwd(), '../../.env'),
+]) {
+  if (existsSync(candidate)) {
+    dotenv.config({ path: candidate });
+    break;
+  }
+}
+
 import { DataSource, DataSourceOptions } from 'typeorm';
 import {
   AccountActivationToken,
@@ -19,7 +36,7 @@ import {
  *   pnpm typeorm migration:revert -d src/database/data-source.ts
  *
  * Le DATABASE_URL est lu depuis l'env (validé par config.schema.ts au démarrage
- * de l'app ; pour la CLI on lit directement process.env).
+ * de l'app ; pour la CLI on lit directement process.env via dotenv ci-dessus).
  */
 export const buildDataSourceOptions = (
   databaseUrl?: string,
