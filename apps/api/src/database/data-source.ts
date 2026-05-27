@@ -16,6 +16,7 @@ for (const candidate of [
   }
 }
 
+import { join } from 'node:path';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import {
   AccountActivationToken,
@@ -31,13 +32,23 @@ import {
  * Configuration TypeORM partagée par l'application NestJS et la CLI de migrations.
  *
  * Usage CLI :
- *   pnpm typeorm migration:generate src/database/migrations/Nom -d src/database/data-source.ts
- *   pnpm typeorm migration:run -d src/database/data-source.ts
- *   pnpm typeorm migration:revert -d src/database/data-source.ts
+ *   pnpm migration:generate src/database/migrations/Nom -d src/database/data-source.ts
+ *   pnpm migration:run -d src/database/data-source.ts
+ *   pnpm migration:revert -d src/database/data-source.ts
  *
  * Le DATABASE_URL est lu depuis l'env (validé par config.schema.ts au démarrage
  * de l'app ; pour la CLI on lit directement process.env via dotenv ci-dessus).
+ *
+ * Discrimination .ts/.js : on regarde l'extension réelle du fichier compilé.
+ * - Sous ts-node (CLI dev) : __filename = data-source.ts → on charge migrations/*.ts
+ * - Sous Node compilé (nest start, prod) : __filename = data-source.js → on charge migrations/*.js
+ * Évite l'erreur "Cannot require() ES Module ... .ts" sous NestJS dev/prod.
  */
+const isTypeScriptRuntime = __filename.endsWith('.ts');
+const migrationsGlob = isTypeScriptRuntime
+  ? join(__dirname, 'migrations', '*.ts')
+  : join(__dirname, 'migrations', '*.js');
+
 export const buildDataSourceOptions = (
   databaseUrl?: string,
 ): DataSourceOptions => ({
@@ -52,7 +63,7 @@ export const buildDataSourceOptions = (
     Session,
     User,
   ],
-  migrations: ['src/database/migrations/*.ts', 'dist/database/migrations/*.js'],
+  migrations: [migrationsGlob],
   migrationsTableName: 'typeorm_migrations',
   migrationsRun: false,
   synchronize: false,

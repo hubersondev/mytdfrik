@@ -1,6 +1,7 @@
 import {
   CallHandler,
   ExecutionContext,
+  HttpException,
   Injectable,
   Logger,
   NestInterceptor,
@@ -29,12 +30,16 @@ const SENSITIVE_KEYS = new Set([
   'authorization',
 ]);
 
+type Outcome = 'SUCCESS' | 'FAILURE';
+
 /**
  * Intercepteur global du journal d'audit (CDC §3.13, §10.6).
  *
  * Capture chaque requête mutante (POST/PUT/PATCH/DELETE), enregistre une entrée
- * dans audit_log après l'exécution réussie du handler. Les actions sensibles
- * peuvent être annotées via @AuditAction(action, objectType) ou exclues via @SkipAudit().
+ * dans audit_log après l'exécution du handler — qu'elle réussisse ou échoue
+ * (CDC §10.6 [EXG-10-110] : "authentification (succès/échec) toujours
+ * journalisée"). Les actions sensibles peuvent être annotées via
+ * @AuditAction(action, objectType) ou exclues via @SkipAudit().
  *
  * L'écriture est asynchrone et best-effort : un échec ne bloque jamais la
  * réponse au client.
@@ -94,9 +99,23 @@ export class AuditInterceptor implements NestInterceptor {
           void this.persist(request, {
             actionCode,
             objectType,
+            outcome: 'SUCCESS',
             payload: {
+              outcome: 'SUCCESS',
               request: requestSnapshot,
               response: this.summarizeResponse(response),
+            },
+          });
+        },
+        error: (err: unknown) => {
+          void this.persist(request, {
+            actionCode,
+            objectType,
+            outcome: 'FAILURE',
+            payload: {
+              outcome: 'FAILURE',
+              request: requestSnapshot,
+              error: this.summarizeError(err),
             },
           });
         },
@@ -109,6 +128,7 @@ export class AuditInterceptor implements NestInterceptor {
     partial: {
       actionCode: string;
       objectType: string;
+      outcome: Outcome;
       payload: Record<string, unknown>;
     },
   ): Promise<void> {
@@ -117,7 +137,7 @@ export class AuditInterceptor implements NestInterceptor {
       await this.auditService.record({
         actorUserId: request.user?.id ?? null,
         actorRole,
-        actionCode: partial.actionCode,
+        actionCode: `${partial.actionCode}:${partial.outcome}`,
         objectType: partial.objectType,
         objectId: this.extractObjectId(request),
         payload: partial.payload,
@@ -162,6 +182,29 @@ export class AuditInterceptor implements NestInterceptor {
       return { _truncated: true, sizeBytes: json.length };
     }
     return sanitized;
+  }
+
+  /**
+   * Réduit une exception à un objet sérialisable sans révéler de stack trace
+   * (qui pourrait fuiter des informations en environnement audité partagé).
+   * Pour HttpException, conserve le statut HTTP et le body de réponse formaté.
+   */
+  private summarizeError(err: unknown): Record<string, unknown> {
+    if (err instanceof HttpException) {
+      const response = err.getResponse();
+      const sanitized =
+        response && typeof response === 'object'
+          ? this.sanitize(response)
+          : { message: String(response) };
+      return {
+        statusCode: err.getStatus(),
+        response: sanitized,
+      };
+    }
+    if (err instanceof Error) {
+      return { name: err.name, message: err.message };
+    }
+    return { value: String(err) };
   }
 
   private extractObjectId(request: Request): string | null {
