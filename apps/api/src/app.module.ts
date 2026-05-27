@@ -3,7 +3,10 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
+import { AuditModule } from './audit/audit.module';
+import { AuthModule } from './auth/auth.module';
 import { configValidationSchema } from './config/config.schema';
+import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 
 @Module({
@@ -44,10 +47,14 @@ import { HealthModule } from './health/health.module';
         limit: 60,
       },
     ]),
+    DatabaseModule,
+    AuthModule,
+    AuditModule,
     HealthModule,
   ],
   providers: [
     {
+      // Rate limiting global. Doit être déclaré avant JwtAuthGuard pour s'appliquer aux routes publiques.
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
