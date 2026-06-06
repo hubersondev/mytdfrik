@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { PRIORITY_LEVEL_CODES } from '../database/entities';
 import type { PriorityLevelCode } from '../database/entities';
 import { UpdatePriorityLevelDto } from './dto/priority-level.dto';
@@ -25,7 +25,7 @@ export class PriorityLevelsController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN')
+  @RequirePermissions('catalog.manage')
   @ApiOperation({
     summary:
       "Met à jour les SLA d'un niveau de priorité (ADMIN, sur validation DG)",

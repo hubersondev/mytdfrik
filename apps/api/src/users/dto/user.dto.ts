@@ -1,15 +1,13 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import {
   IsEmail,
-  IsIn,
   IsOptional,
   IsString,
   IsUUID,
   Length,
+  Matches,
   MaxLength,
 } from 'class-validator';
-import { ROLE_CODES } from '../../database/entities';
-import type { RoleCode } from '../../database/entities';
 
 export class CreateUserDto {
   @ApiProperty({ format: 'email' })
@@ -27,14 +25,22 @@ export class CreateUserDto {
   @Length(1, 120)
   lastName!: string;
 
-  @ApiProperty({ enum: ROLE_CODES })
-  @IsIn(ROLE_CODES as readonly string[])
-  roleId!: RoleCode;
+  @ApiProperty({
+    description:
+      'Code du rôle (dynamique). Son existence est validée par le service.',
+    example: 'CLIENT',
+  })
+  @IsString()
+  @Length(2, 20)
+  @Matches(/^[A-Z][A-Z0-9_]*$/, {
+    message: 'roleId doit être un code de rôle valide (MAJUSCULES).',
+  })
+  roleId!: string;
 
   @ApiProperty({
     required: false,
     description:
-      'Obligatoire si roleId = CLIENT (validation métier dans le service)',
+      'Obligatoire si le rôle est de portée CLIENT (validation métier dans le service)',
   })
   @IsOptional()
   @IsUUID()

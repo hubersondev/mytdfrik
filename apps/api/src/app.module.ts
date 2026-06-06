@@ -11,6 +11,7 @@ import { DatabaseModule } from './database/database.module';
 import { GeoModule } from './geo/geo.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
+import { RbacModule } from './rbac/rbac.module';
 import { RequestsModule } from './requests/requests.module';
 import { UsersModule } from './users/users.module';
 
@@ -54,6 +55,7 @@ import { UsersModule } from './users/users.module';
     ]),
     DatabaseModule,
     MailModule,
+    RbacModule,
     AuthModule,
     AuditModule,
     UsersModule,

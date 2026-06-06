@@ -20,8 +20,9 @@ export type {
   RequestStatus,
 } from './request.entity';
 export { RequestDraft } from './request-draft.entity';
-export { Role, ROLE_CODES } from './role.entity';
-export type { RoleCode } from './role.entity';
+export { Role, ROLE_CODES, ROLE_SCOPES } from './role.entity';
+export type { RoleCode, RoleScope } from './role.entity';
+export { RolePermission } from './role-permission.entity';
 export { Session } from './session.entity';
 export { User } from './user.entity';
 export type { EmailStatus } from './user.entity';

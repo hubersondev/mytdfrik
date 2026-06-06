@@ -16,6 +16,7 @@ import {
   Session,
   User,
 } from '../database/entities';
+import { RbacService } from '../rbac/rbac.service';
 import type { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 
 export interface UserPublicView {
@@ -47,7 +48,32 @@ export class UsersService {
     @InjectRepository(PasswordResetToken)
     private readonly passwordResetTokens: Repository<PasswordResetToken>,
     private readonly config: ConfigService,
+    private readonly rbac: RbacService,
   ) {}
+
+  /**
+   * Valide qu'un rôle existe (et est résoluble) et applique la règle métier :
+   * un rôle de portée CLIENT impose le rattachement à une organisation.
+   */
+  private async assertRoleAssignable(
+    roleId: string,
+    organizationId: string | null | undefined,
+  ): Promise<void> {
+    const access = await this.rbac.resolveAccess(roleId);
+    if (!access) {
+      throw new BadRequestException({
+        code: 'ROLE_NOT_FOUND',
+        message: 'Rôle inconnu ou inactif.',
+      });
+    }
+    if (access.scope === 'CLIENT' && !organizationId) {
+      throw new BadRequestException({
+        code: 'CLIENT_REQUIRES_ORGANIZATION',
+        message:
+          'Un compte de portée Client doit être rattaché à une organisation.',
+      });
+    }
+  }
 
   async list(params: {
     cursor?: string;
@@ -106,12 +132,7 @@ export class UsersService {
   async create(
     dto: CreateUserDto,
   ): Promise<{ user: UserPublicView; activationToken: string }> {
-    if (dto.roleId === 'CLIENT' && !dto.organizationId) {
-      throw new BadRequestException({
-        code: 'CLIENT_REQUIRES_ORGANIZATION',
-        message: 'Un compte Client doit être rattaché à une organisation.',
-      });
-    }
+    await this.assertRoleAssignable(dto.roleId, dto.organizationId);
 
     const existing = await this.users
       .createQueryBuilder('u')
@@ -177,12 +198,10 @@ export class UsersService {
     if (dto.phone !== undefined) u.phone = dto.phone;
     if (dto.timeZone !== undefined) u.timeZone = dto.timeZone;
     if (dto.roleId !== undefined) {
-      if (
-        dto.roleId === 'CLIENT' &&
-        !(dto.organizationId ?? u.organizationId)
-      ) {
-        throw new BadRequestException({ code: 'CLIENT_REQUIRES_ORGANIZATION' });
-      }
+      await this.assertRoleAssignable(
+        dto.roleId,
+        dto.organizationId ?? u.organizationId,
+      );
       u.roleId = dto.roleId;
     }
     if (dto.organizationId !== undefined)

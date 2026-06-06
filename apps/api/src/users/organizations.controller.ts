@@ -12,7 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { CursorPaginationDto } from '../common/dto/pagination.dto';
 import {
   CreateOrganizationDto,
@@ -27,7 +27,7 @@ export class OrganizationsController {
   constructor(private readonly service: OrganizationsService) {}
 
   @Get()
-  @Roles('ADMIN', 'GESTIONNAIRE')
+  @RequirePermissions('organizations.read')
   @ApiOperation({
     summary: 'Liste paginée des organisations (ADMIN, GESTIONNAIRE)',
   })
@@ -39,20 +39,20 @@ export class OrganizationsController {
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'GESTIONNAIRE')
+  @RequirePermissions('organizations.read')
   findOne(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.service.findById(id);
   }
 
   @Post()
-  @Roles('ADMIN')
+  @RequirePermissions('organizations.manage')
   @ApiOperation({ summary: 'Crée une organisation (ADMIN)' })
   create(@Body() dto: CreateOrganizationDto) {
     return this.service.create(dto);
   }
 
   @Patch(':id')
-  @Roles('ADMIN')
+  @RequirePermissions('organizations.manage')
   @ApiOperation({ summary: 'Met à jour une organisation (ADMIN)' })
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -62,7 +62,7 @@ export class OrganizationsController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN')
+  @RequirePermissions('organizations.manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Désactive une organisation (soft-delete, ADMIN)' })
   async remove(@Param('id', new ParseUUIDPipe()) id: string) {

@@ -10,6 +10,8 @@ import {
   Session,
   User,
 } from '../database/entities';
+import type { RoleScope } from '../database/entities';
+import { RbacService } from '../rbac/rbac.service';
 import { generateOpaqueToken, hashToken } from './token-hash.util';
 
 export interface AuthenticatedUser {
@@ -20,6 +22,10 @@ export interface AuthenticatedUser {
   roleId: string;
   organizationId: string | null;
   timeZone: string;
+  /** Portail du rôle (ADR-004) : INTERNAL → /admin, CLIENT → /client. */
+  scope: RoleScope;
+  /** Permissions effectives (ADMIN = catalogue complet). */
+  permissions: string[];
 }
 
 export interface TokenPair {
@@ -58,6 +64,7 @@ export class AuthService {
     private readonly activationTokens: Repository<AccountActivationToken>,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly rbac: RbacService,
   ) {}
 
   // -------------------------- Login --------------------------
@@ -334,11 +341,12 @@ export class AuthService {
       accessToken,
       refreshToken,
       expiresInSeconds: accessTtl,
-      user: this.toAuthenticatedUser(user),
+      user: await this.toAuthenticatedUser(user),
     };
   }
 
-  private toAuthenticatedUser(user: User): AuthenticatedUser {
+  private async toAuthenticatedUser(user: User): Promise<AuthenticatedUser> {
+    const access = await this.rbac.resolveAccess(user.roleId);
     return {
       id: user.id,
       email: user.email,
@@ -347,6 +355,8 @@ export class AuthService {
       roleId: user.roleId,
       organizationId: user.organizationId,
       timeZone: user.timeZone,
+      scope: access?.scope ?? 'CLIENT',
+      permissions: access?.permissions ?? [],
     };
   }
 

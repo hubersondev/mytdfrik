@@ -12,7 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { CursorPaginationDto } from '../common/dto/pagination.dto';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
@@ -43,14 +43,14 @@ export class CategoriesController {
   }
 
   @Post()
-  @Roles('ADMIN')
+  @RequirePermissions('catalog.manage')
   @ApiOperation({ summary: 'Crée une catégorie (ADMIN)' })
   create(@Body() dto: CreateCategoryDto) {
     return this.service.create(dto);
   }
 
   @Patch(':id')
-  @Roles('ADMIN')
+  @RequirePermissions('catalog.manage')
   @ApiOperation({ summary: 'Met à jour une catégorie (ADMIN)' })
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -60,7 +60,7 @@ export class CategoriesController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN')
+  @RequirePermissions('catalog.manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Désactive une catégorie (soft-delete, ADMIN)' })
   async remove(@Param('id', new ParseUUIDPipe()) id: string) {

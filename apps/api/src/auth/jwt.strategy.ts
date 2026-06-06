@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Repository } from 'typeorm';
 import { User } from '../database/entities';
+import { RbacService } from '../rbac/rbac.service';
 import type { AuthenticatedUser } from './auth.service';
 
 interface JwtPayload {
@@ -20,6 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     config: ConfigService,
     @InjectRepository(User) private readonly users: Repository<User>,
+    private readonly rbac: RbacService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -41,6 +43,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException({ code: 'USER_DISABLED' });
     }
 
+    // Scope + permissions résolus à chaque requête → toujours frais (une
+    // modification de rôle/permissions prend effet immédiatement, sans refresh).
+    const access = await this.rbac.resolveAccess(user.roleId);
+    if (!access) {
+      throw new UnauthorizedException({ code: 'ROLE_DISABLED' });
+    }
+
     return {
       id: user.id,
       email: user.email,
@@ -49,6 +58,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       roleId: user.roleId,
       organizationId: user.organizationId,
       timeZone: user.timeZone,
+      scope: access.scope,
+      permissions: access.permissions,
     };
   }
 }
