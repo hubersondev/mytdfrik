@@ -10,6 +10,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
+  Shield,
   Sparkles,
   Tags,
   TicketCheck,
@@ -47,6 +48,7 @@ const NAV_CONFIG: NavItem[] = [
 ];
 
 const NAV_SYSTEM: NavItem[] = [
+  { label: 'Rôles & permissions', href: '/admin/roles', icon: Shield },
   { label: 'Paramètres', href: '/admin/settings', icon: Settings, badge: 'S3' },
 ];
 

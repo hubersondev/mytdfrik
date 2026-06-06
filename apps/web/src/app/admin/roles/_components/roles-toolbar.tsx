@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUpDown, Check, Filter, Search, ShieldHalf, X } from 'lucide-react';
+import { Check, Filter, Search, Shield, X } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
@@ -14,26 +14,22 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
-  DEFAULT_SORT,
-  SORT_OPTIONS,
-  SORT_ORDER,
+  SCOPE_FILTERS,
+  SCOPE_ORDER,
   STATUS_FILTERS,
   STATUS_ORDER,
-  type RoleOption,
-  type SortKey,
+  type ScopeFilterKey,
   type StatusFilterKey,
-} from '@/lib/users';
+} from '@/lib/roles';
 import { cn } from '@/lib/utils';
 
 interface Props {
-  role: string;
+  scope: ScopeFilterKey;
   status: StatusFilterKey;
-  sort: SortKey;
   query: string;
-  roles: RoleOption[];
 }
 
-export function UsersToolbar({ role, status, sort, query, roles }: Props) {
+export function RolesToolbar({ scope, status, query }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -41,8 +37,6 @@ export function UsersToolbar({ role, status, sort, query, roles }: Props) {
   const [search, setSearch] = useState(query);
   const [prevQuery, setPrevQuery] = useState(query);
 
-  // Resynchronise le champ si l'URL change depuis l'extérieur (ex. bouton
-  // « Réinitialiser ») — ajustement d'état pendant le rendu, sans effet.
   if (query !== prevQuery) {
     setPrevQuery(query);
     setSearch(query);
@@ -57,17 +51,10 @@ export function UsersToolbar({ role, status, sort, query, roles }: Props) {
     });
   };
 
-  const setRole = (value: string) =>
-    pushParams((p) => (value === 'ALL' ? p.delete('role') : p.set('role', value)));
-
-  const currentRoleLabel = roles.find((r) => r.id === role)?.label ?? role;
-
+  const setScope = (value: ScopeFilterKey) =>
+    pushParams((p) => (value === 'ALL' ? p.delete('scope') : p.set('scope', value)));
   const setStatus = (value: StatusFilterKey) =>
     pushParams((p) => (value === 'ALL' ? p.delete('status') : p.set('status', value)));
-
-  const setSort = (value: SortKey) =>
-    pushParams((p) => (value === DEFAULT_SORT ? p.delete('sort') : p.set('sort', value)));
-
   const submitSearch = (value: string) =>
     pushParams((p) => {
       const v = value.trim();
@@ -75,7 +62,7 @@ export function UsersToolbar({ role, status, sort, query, roles }: Props) {
       else p.delete('q');
     });
 
-  const hasFilters = role !== 'ALL' || status !== 'ALL' || query.trim() !== '';
+  const hasFilters = scope !== 'ALL' || status !== 'ALL' || query.trim() !== '';
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -91,13 +78,12 @@ export function UsersToolbar({ role, status, sort, query, roles }: Props) {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher (nom, e-mail)…"
+          placeholder="Rechercher un rôle…"
           className="h-9 pl-9"
-          aria-label="Rechercher un utilisateur"
+          aria-label="Rechercher un rôle"
         />
       </form>
 
-      {/* Filtre rôle */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -105,47 +91,33 @@ export function UsersToolbar({ role, status, sort, query, roles }: Props) {
             size="sm"
             disabled={pending}
             className={cn(
-              role !== 'ALL' &&
+              scope !== 'ALL' &&
                 'bg-leaf-50 text-leaf-800 hover:bg-leaf-100 dark:bg-leaf-950/40 dark:text-leaf-200',
             )}
           >
-            <ShieldHalf className="h-3.5 w-3.5" />
-            {role === 'ALL' ? 'Rôle' : currentRoleLabel}
+            <Shield className="h-3.5 w-3.5" />
+            {SCOPE_FILTERS[scope].label}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[14rem]">
-          <DropdownMenuLabel>Filtrer par rôle</DropdownMenuLabel>
+        <DropdownMenuContent align="end" className="min-w-[12rem]">
+          <DropdownMenuLabel>Filtrer par portail</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="cursor-pointer"
-            onSelect={(e) => {
-              e.preventDefault();
-              setRole('ALL');
-            }}
-          >
-            <Check className={cn('h-3.5 w-3.5', role === 'ALL' ? 'opacity-100' : 'opacity-0')} />
-            Tous les rôles
-          </DropdownMenuItem>
-          {roles.map((opt) => (
+          {SCOPE_ORDER.map((key) => (
             <DropdownMenuItem
-              key={opt.id}
+              key={key}
               className="cursor-pointer"
               onSelect={(e) => {
                 e.preventDefault();
-                setRole(opt.id);
+                setScope(key);
               }}
             >
-              <Check className={cn('h-3.5 w-3.5', role === opt.id ? 'opacity-100' : 'opacity-0')} />
-              {opt.label}
-              <span className="ml-auto text-[10px] uppercase tracking-wide text-zinc-400">
-                {opt.scope === 'CLIENT' ? 'Client' : 'Interne'}
-              </span>
+              <Check className={cn('h-3.5 w-3.5', scope === key ? 'opacity-100' : 'opacity-0')} />
+              {SCOPE_FILTERS[key].label}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Filtre statut */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -175,41 +147,6 @@ export function UsersToolbar({ role, status, sort, query, roles }: Props) {
             >
               <Check className={cn('h-3.5 w-3.5', status === key ? 'opacity-100' : 'opacity-0')} />
               {STATUS_FILTERS[key].label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {/* Tri */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={pending}
-            className={cn(
-              sort !== DEFAULT_SORT &&
-                'bg-leaf-50 text-leaf-800 hover:bg-leaf-100 dark:bg-leaf-950/40 dark:text-leaf-200',
-            )}
-          >
-            <ArrowUpDown className="h-3.5 w-3.5" />
-            {sort === DEFAULT_SORT ? 'Trier' : SORT_OPTIONS[sort].short}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[16rem]">
-          <DropdownMenuLabel>Ordonner par</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {SORT_ORDER.map((key) => (
-            <DropdownMenuItem
-              key={key}
-              className="cursor-pointer"
-              onSelect={(e) => {
-                e.preventDefault();
-                setSort(key);
-              }}
-            >
-              <Check className={cn('h-3.5 w-3.5', sort === key ? 'opacity-100' : 'opacity-0')} />
-              {SORT_OPTIONS[key].label}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

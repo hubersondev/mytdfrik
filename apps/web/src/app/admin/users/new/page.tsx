@@ -1,6 +1,7 @@
 import { ArrowLeft, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { apiFetchOr } from '@/lib/api';
+import { fetchRoleOptions } from '@/lib/role-options';
 import type { CursorPage, OrganizationRow } from '@/lib/users';
 import { UserForm } from '../_components/user-form';
 
@@ -9,10 +10,13 @@ function emptyPage<T>(): CursorPage<T> {
 }
 
 export default async function NewUserPage() {
-  const orgs = await apiFetchOr<CursorPage<OrganizationRow>>(
-    '/organizations?limit=100',
-    emptyPage<OrganizationRow>(),
-  );
+  const [orgs, roles] = await Promise.all([
+    apiFetchOr<CursorPage<OrganizationRow>>(
+      '/organizations?limit=100',
+      emptyPage<OrganizationRow>(),
+    ),
+    fetchRoleOptions(),
+  ]);
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
@@ -39,7 +43,7 @@ export default async function NewUserPage() {
         </div>
       </div>
 
-      <UserForm mode="create" organizations={orgs.items} />
+      <UserForm mode="create" organizations={orgs.items} roles={roles} />
     </div>
   );
 }

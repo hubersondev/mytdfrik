@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ROLE_DESCRIPTIONS, ROLE_OPTIONS, type OrganizationRow, type RoleId } from '@/lib/users';
+import type { OrganizationRow, RoleOption } from '@/lib/users';
 import { cn } from '@/lib/utils';
 import { createUserAction, updateUserAction, type UserFormFailure } from '../actions';
 import { userFormSchema, type UserFormInput } from '../schema';
@@ -17,6 +17,8 @@ import { userFormSchema, type UserFormInput } from '../schema';
 interface Props {
   mode: 'create' | 'edit';
   organizations: OrganizationRow[];
+  /** Rôles attribuables, chargés depuis l'API (ADR-004). */
+  roles: RoleOption[];
   /** Identifiant requis en mode édition. */
   userId?: string;
   defaultValues?: Partial<UserFormInput>;
@@ -25,7 +27,7 @@ interface Props {
 const FIELD_CLASS =
   'mt-1 flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:placeholder:text-zinc-500 dark:focus-visible:ring-zinc-100';
 
-export function UserForm({ mode, organizations, userId, defaultValues }: Props) {
+export function UserForm({ mode, organizations, roles, userId, defaultValues }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, startSubmit] = useTransition();
 
@@ -36,18 +38,29 @@ export function UserForm({ mode, organizations, userId, defaultValues }: Props) 
       firstName: defaultValues?.firstName ?? '',
       lastName: defaultValues?.lastName ?? '',
       email: defaultValues?.email ?? '',
-      roleId: (defaultValues?.roleId as RoleId) ?? ('' as unknown as RoleId),
+      roleId: defaultValues?.roleId ?? '',
       organizationId: defaultValues?.organizationId ?? '',
       phone: defaultValues?.phone ?? '',
       timeZone: defaultValues?.timeZone ?? 'Africa/Abidjan',
     },
   });
 
-  const role = form.watch('roleId');
+  const roleId = form.watch('roleId');
+  const activeRoles = roles.filter((r) => r.isActive);
+  const selectedRole = roles.find((r) => r.id === roleId);
+  const requiresOrg = selectedRole?.scope === 'CLIENT';
   const activeOrgs = organizations.filter((o) => o.isActive);
 
   function onSubmit(data: UserFormInput) {
     setFormError(null);
+    // Règle métier : un rôle de portée Client impose une organisation.
+    if (requiresOrg && !data.organizationId) {
+      form.setError('organizationId', {
+        type: 'validate',
+        message: 'Une organisation est obligatoire pour un rôle de portée Client.',
+      });
+      return;
+    }
     startSubmit(async () => {
       const result: UserFormFailure | undefined =
         mode === 'create'
@@ -97,21 +110,21 @@ export function UserForm({ mode, organizations, userId, defaultValues }: Props) 
               <option value="" disabled>
                 Sélectionnez un rôle…
               </option>
-              {ROLE_OPTIONS.map((opt) => (
+              {activeRoles.map((opt) => (
                 <option key={opt.id} value={opt.id}>
-                  {opt.label}
+                  {opt.label} ({opt.scope === 'CLIENT' ? 'Client' : 'Interne'})
                 </option>
               ))}
             </select>
-            {role && ROLE_DESCRIPTIONS[role as RoleId] && (
+            {selectedRole?.description && (
               <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-                {ROLE_DESCRIPTIONS[role as RoleId]}
+                {selectedRole.description}
               </p>
             )}
           </Field>
 
           <Field
-            label={role === 'CLIENT' ? 'Organisation (obligatoire)' : 'Organisation (optionnelle)'}
+            label={requiresOrg ? 'Organisation (obligatoire)' : 'Organisation (optionnelle)'}
             error={form.formState.errors.organizationId?.message}
           >
             <select className={FIELD_CLASS} {...form.register('organizationId')}>
@@ -122,9 +135,9 @@ export function UserForm({ mode, organizations, userId, defaultValues }: Props) 
                 </option>
               ))}
             </select>
-            {activeOrgs.length === 0 && (
+            {requiresOrg && activeOrgs.length === 0 && (
               <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
-                Aucune organisation active. Créez-en une avant d&apos;ajouter un Client.
+                Aucune organisation active. Créez-en une avant d&apos;ajouter ce compte.
               </p>
             )}
           </Field>

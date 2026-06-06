@@ -2,6 +2,7 @@ import { ArrowLeft, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { apiFetch, apiFetchOr } from '@/lib/api';
+import { fetchRoleOptions } from '@/lib/role-options';
 import type { CursorPage, OrganizationRow, UserRow } from '@/lib/users';
 import { UserForm } from '../../_components/user-form';
 
@@ -20,10 +21,13 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
     throw error;
   }
 
-  const orgs = await apiFetchOr<CursorPage<OrganizationRow>>(
-    '/organizations?limit=100',
-    emptyPage<OrganizationRow>(),
-  );
+  const [orgs, roles] = await Promise.all([
+    apiFetchOr<CursorPage<OrganizationRow>>(
+      '/organizations?limit=100',
+      emptyPage<OrganizationRow>(),
+    ),
+    fetchRoleOptions(),
+  ]);
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
@@ -52,6 +56,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
         mode="edit"
         userId={user.id}
         organizations={orgs.items}
+        roles={roles}
         defaultValues={{
           firstName: user.firstName,
           lastName: user.lastName,

@@ -8,14 +8,26 @@ import { cookies } from 'next/headers';
 export const AUTH_COOKIE_NAME = 'mytdfrik_session';
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 jours
 
+export type RoleScope = 'INTERNAL' | 'CLIENT';
+
 export interface SessionUser {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
-  roleId: 'CLIENT' | 'GESTIONNAIRE' | 'RESPONSABLE' | 'ADMIN' | 'DG';
+  /** Code du rôle (dynamique depuis ADR-004). */
+  roleId: string;
   organizationId: string | null;
   timeZone: string;
+  /** Portail du rôle : INTERNAL → /admin, CLIENT → /client. */
+  scope: RoleScope;
+  /** Permissions effectives — sert à conditionner l'affichage côté UI. */
+  permissions: string[];
+}
+
+/** Vrai si l'utilisateur possède la permission (ou s'il est super-admin). */
+export function hasPermission(user: SessionUser, code: string): boolean {
+  return user.permissions.includes(code);
 }
 
 export interface SessionPayload {

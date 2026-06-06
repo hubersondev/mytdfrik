@@ -1,38 +1,26 @@
 import type { BadgeProps } from '@/components/ui/badge';
 
 /**
- * Domaine « Utilisateurs » côté front — types, libellés et helpers partagés
- * entre la liste admin, les formulaires et les Server Actions.
+ * Domaine « Utilisateurs » côté front — types et helpers partagés entre la
+ * liste admin, les formulaires et les Server Actions.
  *
- * Source de vérité API : `UserPublicView` (apps/api/src/users) — réponse en
- * camelCase. Les 5 rôles sont fixes (CDC §3.2, table `roles`).
+ * Source de vérité API : `UserPublicView` (apps/api/src/users). Depuis l'ADR-004
+ * les rôles sont **dynamiques** : ils sont chargés depuis `GET /roles` et passés
+ * aux composants, plutôt que figés ici.
  */
 
-export const ROLE_IDS = ['CLIENT', 'GESTIONNAIRE', 'RESPONSABLE', 'ADMIN', 'DG'] as const;
-export type RoleId = (typeof ROLE_IDS)[number];
+export type RoleScope = 'INTERNAL' | 'CLIENT';
 
-/** Libellés humains des rôles, affichés dans l'UI. */
-export const ROLE_LABELS: Record<RoleId, string> = {
-  CLIENT: 'Client',
-  GESTIONNAIRE: 'Gestionnaire',
-  RESPONSABLE: 'Responsable',
-  ADMIN: 'Administrateur',
-  DG: 'Direction générale',
-};
+/** Rôle proposé dans les sélecteurs et filtres (sous-ensemble de RoleView). */
+export interface RoleOption {
+  id: string;
+  label: string;
+  scope: RoleScope;
+  description?: string | null;
+  isActive: boolean;
+}
 
-/** Description courte du périmètre de chaque rôle (CDC §3.2). */
-export const ROLE_DESCRIPTIONS: Record<RoleId, string> = {
-  CLIENT: 'Soumet ses demandes et suit leur traitement. Rattaché à une organisation.',
-  GESTIONNAIRE: 'Réceptionne, qualifie et affecte les demandes aux responsables.',
-  RESPONSABLE: 'Traite les demandes affectées et clôture les dossiers.',
-  ADMIN: 'Gère les utilisateurs, le catalogue et les paramètres système.',
-  DG: 'Consulte les tableaux de bord et indicateurs stratégiques.',
-};
-
-/** Liste ordonnée pour les <select> et menus de filtre. */
-export const ROLE_OPTIONS = ROLE_IDS.map((id) => ({ id, label: ROLE_LABELS[id] }));
-
-/** Couleur de badge associée à un rôle. */
+/** Couleur de badge associée à un rôle (socle connu, fallback neutre). */
 export function roleVariant(roleId: string): NonNullable<BadgeProps['variant']> {
   switch (roleId) {
     case 'ADMIN':
@@ -43,7 +31,6 @@ export function roleVariant(roleId: string): NonNullable<BadgeProps['variant']> 
       return 'leaf';
     case 'RESPONSABLE':
       return 'outline';
-    case 'CLIENT':
     default:
       return 'secondary';
   }
@@ -55,7 +42,7 @@ export interface UserRow {
   email: string;
   firstName: string;
   lastName: string;
-  roleId: RoleId;
+  roleId: string;
   organizationId: string | null;
   phone: string | null;
   isActive: boolean;
@@ -64,7 +51,7 @@ export interface UserRow {
   createdAt: string;
 }
 
-/** Organisation (utilisée pour rattacher les comptes CLIENT). */
+/** Organisation (utilisée pour rattacher les comptes de portée Client). */
 export interface OrganizationRow {
   id: string;
   name: string;
@@ -93,8 +80,9 @@ export function statusKeyFromQuery(raw: string | undefined): StatusFilterKey {
   return 'ALL';
 }
 
-export function roleKeyFromQuery(raw: string | undefined): RoleId | 'ALL' {
-  return raw && (ROLE_IDS as readonly string[]).includes(raw) ? (raw as RoleId) : 'ALL';
+/** Normalise le filtre rôle de l'URL : 'ALL' ou un code de rôle libre. */
+export function roleKeyFromQuery(raw: string | undefined): string {
+  return raw && raw.trim() ? raw : 'ALL';
 }
 
 export const SORT_OPTIONS = {
