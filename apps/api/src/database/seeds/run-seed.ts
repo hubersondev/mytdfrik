@@ -3,6 +3,7 @@ import { config as loadEnv } from 'dotenv';
 import { AppDataSource } from '../data-source';
 import { seedAdminBootstrap } from './admin-bootstrap.seed';
 import { seedCategories } from './categories.seed';
+import { seedGeo } from './geo.seed';
 import { seedPriorityLevels } from './priority-levels.seed';
 import { seedProducts } from './products.seed';
 import { seedRoles } from './roles.seed';
@@ -29,6 +30,9 @@ async function main(): Promise<void> {
 
     console.log('[seed] Seeding du catalogue de produits…');
     await seedProducts(AppDataSource);
+
+    console.log('[seed] Seeding du référentiel géographique (pays / villes)…');
+    await seedGeo(AppDataSource);
 
     console.log("[seed] Seeding de l'admin bootstrap…");
     await seedAdminBootstrap(AppDataSource);
