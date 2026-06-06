@@ -4,10 +4,14 @@ import {
   DeleteDateColumn,
   Entity,
   Index,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { City } from './city.entity';
+import { Country } from './country.entity';
 import { User } from './user.entity';
 
 /**
@@ -39,11 +43,19 @@ export class Organization {
   })
   addressLine!: string | null;
 
-  @Column({ type: 'varchar', length: 120, nullable: true })
-  city!: string | null;
+  @Column({ name: 'country_id', type: 'uuid', nullable: true })
+  countryId!: string | null;
 
-  @Column({ type: 'varchar', length: 80, nullable: true })
-  country!: string | null;
+  @ManyToOne(() => Country, { eager: false, nullable: true })
+  @JoinColumn({ name: 'country_id' })
+  country!: Country | null;
+
+  @Column({ name: 'city_id', type: 'uuid', nullable: true })
+  cityId!: string | null;
+
+  @ManyToOne(() => City, { eager: false, nullable: true })
+  @JoinColumn({ name: 'city_id' })
+  city!: City | null;
 
   @Column({
     name: 'primary_contact_email',

@@ -1,6 +1,8 @@
 export { AccountActivationToken } from './account-activation-token.entity';
 export { AuditLog } from './audit-log.entity';
 export { Category } from './category.entity';
+export { City } from './city.entity';
+export { Country } from './country.entity';
 export { Organization } from './organization.entity';
 export { PasswordResetToken } from './password-reset-token.entity';
 export { PriorityLevel, PRIORITY_LEVEL_CODES } from './priority-level.entity';

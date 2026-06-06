@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { configValidationSchema } from './config/config.schema';
 import { DatabaseModule } from './database/database.module';
+import { GeoModule } from './geo/geo.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
 import { RequestsModule } from './requests/requests.module';
@@ -57,6 +58,7 @@ import { UsersModule } from './users/users.module';
     AuditModule,
     UsersModule,
     CatalogModule,
+    GeoModule,
     RequestsModule,
     HealthModule,
   ],

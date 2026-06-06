@@ -4,6 +4,7 @@ import {
   IsEmail,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   MaxLength,
 } from 'class-validator';
@@ -26,17 +27,23 @@ export class CreateOrganizationDto {
   @MaxLength(200)
   addressLine?: string;
 
-  @ApiProperty({ required: false, maxLength: 120 })
+  @ApiProperty({
+    required: false,
+    format: 'uuid',
+    description: 'Pays de référence (table countries)',
+  })
   @IsOptional()
-  @IsString()
-  @MaxLength(120)
-  city?: string;
+  @IsUUID()
+  countryId?: string;
 
-  @ApiProperty({ required: false, maxLength: 80 })
+  @ApiProperty({
+    required: false,
+    format: 'uuid',
+    description: 'Ville de référence (table cities)',
+  })
   @IsOptional()
-  @IsString()
-  @MaxLength(80)
-  country?: string;
+  @IsUUID()
+  cityId?: string;
 
   @ApiProperty({ required: false, format: 'email' })
   @IsOptional()

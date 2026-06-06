@@ -83,7 +83,7 @@ export default async function AdminDashboard() {
       value: users.items.length,
       sub: `${activeCount(users.items)} actifs`,
       icon: Users,
-      href: '/admin/categories',
+      href: '/admin/users',
       tone: 'sand' as const,
     },
     {
@@ -124,9 +124,11 @@ export default async function AdminDashboard() {
             <Download className="h-4 w-4" />
             Audit log
           </Button>
-          <Button size="sm">
-            <Plus className="h-4 w-4" />
-            Nouvel utilisateur
+          <Button asChild size="sm">
+            <Link href="/admin/users/new">
+              <Plus className="h-4 w-4" />
+              Nouvel utilisateur
+            </Link>
           </Button>
         </div>
       </header>

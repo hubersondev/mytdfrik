@@ -27,7 +27,11 @@ export class OrganizationsService {
     const limit = params.limit ?? 25;
     const decoded = decodeCursor(params.cursor);
 
-    const qb = this.repo.createQueryBuilder('o').where('o.deleted_at IS NULL');
+    const qb = this.repo
+      .createQueryBuilder('o')
+      .leftJoinAndSelect('o.country', 'country')
+      .leftJoinAndSelect('o.city', 'city')
+      .where('o.deleted_at IS NULL');
     if (decoded) {
       qb.andWhere('(o.created_at, o.id) < (:cursorCreatedAt, :cursorId)', {
         cursorCreatedAt: decoded.createdAt,
@@ -58,7 +62,10 @@ export class OrganizationsService {
   }
 
   async findById(id: string): Promise<Organization> {
-    const org = await this.repo.findOne({ where: { id, deletedAt: IsNull() } });
+    const org = await this.repo.findOne({
+      where: { id, deletedAt: IsNull() },
+      relations: { country: true, city: true },
+    });
     if (!org) {
       throw new NotFoundException({ code: 'ORGANIZATION_NOT_FOUND' });
     }
@@ -81,12 +88,13 @@ export class OrganizationsService {
       name: dto.name,
       externalReference: dto.externalReference ?? null,
       addressLine: dto.addressLine ?? null,
-      city: dto.city ?? null,
-      country: dto.country ?? null,
+      countryId: dto.countryId ?? null,
+      cityId: dto.cityId ?? null,
       primaryContactEmail: dto.primaryContactEmail ?? null,
       isActive: dto.isActive ?? true,
     });
-    return this.repo.save(org);
+    const saved = await this.repo.save(org);
+    return this.findById(saved.id);
   }
 
   async update(id: string, dto: UpdateOrganizationDto): Promise<Organization> {
@@ -101,12 +109,13 @@ export class OrganizationsService {
     if (dto.externalReference !== undefined)
       org.externalReference = dto.externalReference;
     if (dto.addressLine !== undefined) org.addressLine = dto.addressLine;
-    if (dto.city !== undefined) org.city = dto.city;
-    if (dto.country !== undefined) org.country = dto.country;
+    if (dto.countryId !== undefined) org.countryId = dto.countryId ?? null;
+    if (dto.cityId !== undefined) org.cityId = dto.cityId ?? null;
     if (dto.primaryContactEmail !== undefined)
       org.primaryContactEmail = dto.primaryContactEmail;
     if (dto.isActive !== undefined) org.isActive = dto.isActive;
-    return this.repo.save(org);
+    await this.repo.save(org);
+    return this.findById(org.id);
   }
 
   async deactivate(id: string): Promise<void> {
