@@ -13,7 +13,6 @@ import {
 } from 'typeorm';
 import { Organization } from './organization.entity';
 import { Role } from './role.entity';
-import type { RoleCode } from './role.entity';
 import { Session } from './session.entity';
 
 /**
@@ -62,8 +61,9 @@ export class User {
   @Column({ name: 'avatar_url', type: 'varchar', length: 500, nullable: true })
   avatarUrl!: string | null;
 
+  /** Code du rôle (dynamique depuis ADR-004). FK vers roles.id. */
   @Column({ name: 'role_id', type: 'varchar', length: 20 })
-  roleId!: RoleCode;
+  roleId!: string;
 
   @ManyToOne(() => Role, (role) => role.users, { eager: false })
   @JoinColumn({ name: 'role_id' })

@@ -12,7 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { CursorPaginationDto } from '../common/dto/pagination.dto';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import { ProductsService } from './products.service';
@@ -43,14 +43,14 @@ export class ProductsController {
   }
 
   @Post()
-  @Roles('ADMIN')
+  @RequirePermissions('catalog.manage')
   @ApiOperation({ summary: 'Crée un produit (ADMIN)' })
   create(@Body() dto: CreateProductDto) {
     return this.service.create(dto);
   }
 
   @Patch(':id')
-  @Roles('ADMIN')
+  @RequirePermissions('catalog.manage')
   @ApiOperation({ summary: 'Met à jour un produit (ADMIN)' })
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -60,7 +60,7 @@ export class ProductsController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN')
+  @RequirePermissions('catalog.manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Désactive un produit (soft-delete, ADMIN)' })
   async remove(@Param('id', new ParseUUIDPipe()) id: string) {

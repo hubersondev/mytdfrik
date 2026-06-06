@@ -15,8 +15,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Roles } from '../auth/decorators/roles.decorator';
-import type { RoleCode } from '../database/entities';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { DraftsService } from './drafts.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpsertDraftDto } from './dto/draft.dto';
@@ -37,7 +36,7 @@ export class RequestsController {
   // -------------------- Demandes --------------------
 
   @Post()
-  @Roles('CLIENT')
+  @RequirePermissions('requests.create')
   @ApiOperation({ summary: 'Soumet une nouvelle demande (Client)' })
   async create(
     @CurrentUser() user: AuthenticatedUser,
@@ -46,7 +45,7 @@ export class RequestsController {
     const created = await this.service.create(
       {
         id: user.id,
-        roleId: user.roleId as RoleCode,
+        scope: user.scope,
         organizationId: user.organizationId,
       },
       dto,
@@ -75,7 +74,7 @@ export class RequestsController {
     return this.service.list(
       {
         id: user.id,
-        roleId: user.roleId as RoleCode,
+        scope: user.scope,
         organizationId: user.organizationId,
       },
       {
@@ -96,7 +95,7 @@ export class RequestsController {
     return this.service.findByPublicReference(
       {
         id: user.id,
-        roleId: user.roleId as RoleCode,
+        scope: user.scope,
         organizationId: user.organizationId,
       },
       reference,
@@ -112,7 +111,7 @@ export class RequestsController {
     return this.service.findById(
       {
         id: user.id,
-        roleId: user.roleId as RoleCode,
+        scope: user.scope,
         organizationId: user.organizationId,
       },
       id,
@@ -122,14 +121,14 @@ export class RequestsController {
   // -------------------- Brouillons (Client uniquement) --------------------
 
   @Get('drafts/mine')
-  @Roles('CLIENT')
+  @RequirePermissions('requests.create')
   @ApiOperation({ summary: 'Liste mes brouillons en cours' })
   listMyDrafts(@CurrentUser() user: AuthenticatedUser) {
     return this.drafts.listMine(user.id);
   }
 
   @Get('drafts/:id')
-  @Roles('CLIENT')
+  @RequirePermissions('requests.create')
   @ApiOperation({
     summary: "Détail d'un brouillon (Client propriétaire uniquement)",
   })
@@ -141,7 +140,7 @@ export class RequestsController {
   }
 
   @Post('drafts')
-  @Roles('CLIENT')
+  @RequirePermissions('requests.create')
   @ApiOperation({ summary: 'Crée un brouillon' })
   createDraft(
     @CurrentUser() user: AuthenticatedUser,
@@ -151,7 +150,7 @@ export class RequestsController {
   }
 
   @Put('drafts/:id')
-  @Roles('CLIENT')
+  @RequirePermissions('requests.create')
   @ApiOperation({
     summary: 'Met à jour un brouillon (sauvegarde inter-étapes)',
   })
@@ -164,7 +163,7 @@ export class RequestsController {
   }
 
   @Delete('drafts/:id')
-  @Roles('CLIENT')
+  @RequirePermissions('requests.create')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Supprime un brouillon' })
   async deleteDraft(

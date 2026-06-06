@@ -31,6 +31,7 @@ import {
   Request,
   RequestDraft,
   Role,
+  RolePermission,
   Session,
   User,
 } from './entities';
@@ -74,6 +75,7 @@ export const buildDataSourceOptions = (
     Request,
     RequestDraft,
     Role,
+    RolePermission,
     Session,
     User,
   ],

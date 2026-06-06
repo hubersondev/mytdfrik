@@ -12,7 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { CitiesService } from './cities.service';
 import { CreateCityDto, UpdateCityDto } from './dto/city.dto';
 import { ListCitiesQueryDto } from './dto/list-geo.dto';
@@ -43,14 +43,14 @@ export class CitiesController {
   }
 
   @Post()
-  @Roles('ADMIN')
+  @RequirePermissions('geo.manage')
   @ApiOperation({ summary: 'Crée une ville (ADMIN)' })
   create(@Body() dto: CreateCityDto) {
     return this.service.create(dto);
   }
 
   @Patch(':id')
-  @Roles('ADMIN')
+  @RequirePermissions('geo.manage')
   @ApiOperation({ summary: 'Met à jour une ville (ADMIN)' })
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -60,7 +60,7 @@ export class CitiesController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN')
+  @RequirePermissions('geo.manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Désactive une ville (soft-delete, ADMIN)' })
   async remove(@Param('id', new ParseUUIDPipe()) id: string) {

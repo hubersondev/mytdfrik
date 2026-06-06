@@ -14,7 +14,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { CursorPaginationDto } from '../common/dto/pagination.dto';
 import { MailService } from '../mail/mail.service';
@@ -46,7 +46,7 @@ export class UsersController {
   }
 
   @Get()
-  @Roles('ADMIN', 'GESTIONNAIRE')
+  @RequirePermissions('users.read')
   @ApiOperation({
     summary: 'Liste paginée des utilisateurs (ADMIN, GESTIONNAIRE)',
   })
@@ -64,14 +64,14 @@ export class UsersController {
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'GESTIONNAIRE')
+  @RequirePermissions('users.read')
   @ApiOperation({ summary: "Détail d'un utilisateur (ADMIN, GESTIONNAIRE)" })
   findOne(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.service.findById(id);
   }
 
   @Post()
-  @Roles('ADMIN')
+  @RequirePermissions('users.manage')
   @ApiOperation({
     summary: "Crée un utilisateur et émet un jeton d'activation (ADMIN)",
   })
@@ -96,7 +96,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN')
+  @RequirePermissions('users.manage')
   @ApiOperation({ summary: 'Met à jour un utilisateur (ADMIN)' })
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -106,7 +106,7 @@ export class UsersController {
   }
 
   @Post(':id/deactivate')
-  @Roles('ADMIN')
+  @RequirePermissions('users.manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Désactive un compte et révoque ses sessions (ADMIN)',
@@ -116,7 +116,7 @@ export class UsersController {
   }
 
   @Post(':id/reactivate')
-  @Roles('ADMIN')
+  @RequirePermissions('users.manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Réactive un compte (ADMIN)' })
   async reactivate(@Param('id', new ParseUUIDPipe()) id: string) {
@@ -124,7 +124,7 @@ export class UsersController {
   }
 
   @Post(':id/password-reset')
-  @Roles('ADMIN')
+  @RequirePermissions('users.manage')
   @ApiOperation({
     summary: 'Émet un jeton de réinitialisation pour un compte (ADMIN)',
   })

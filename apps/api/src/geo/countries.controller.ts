@@ -12,7 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { CountriesService } from './countries.service';
 import { CreateCountryDto, UpdateCountryDto } from './dto/country.dto';
 import { ListCountriesQueryDto } from './dto/list-geo.dto';
@@ -40,14 +40,14 @@ export class CountriesController {
   }
 
   @Post()
-  @Roles('ADMIN')
+  @RequirePermissions('geo.manage')
   @ApiOperation({ summary: 'Crée un pays (ADMIN)' })
   create(@Body() dto: CreateCountryDto) {
     return this.service.create(dto);
   }
 
   @Patch(':id')
-  @Roles('ADMIN')
+  @RequirePermissions('geo.manage')
   @ApiOperation({ summary: 'Met à jour un pays (ADMIN)' })
   update(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -57,7 +57,7 @@ export class CountriesController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN')
+  @RequirePermissions('geo.manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Désactive un pays (soft-delete, ADMIN)' })
   async remove(@Param('id', new ParseUUIDPipe()) id: string) {

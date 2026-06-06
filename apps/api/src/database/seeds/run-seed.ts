@@ -6,6 +6,7 @@ import { seedCategories } from './categories.seed';
 import { seedGeo } from './geo.seed';
 import { seedPriorityLevels } from './priority-levels.seed';
 import { seedProducts } from './products.seed';
+import { seedRolePermissions } from './role-permissions.seed';
 import { seedRoles } from './roles.seed';
 
 /**
@@ -21,6 +22,9 @@ async function main(): Promise<void> {
   try {
     console.log('[seed] Seeding des rôles…');
     await seedRoles(AppDataSource);
+
+    console.log('[seed] Seeding des permissions par défaut des rôles…');
+    await seedRolePermissions(AppDataSource);
 
     console.log('[seed] Seeding des niveaux de priorité…');
     await seedPriorityLevels(AppDataSource);

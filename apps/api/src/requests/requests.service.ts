@@ -16,7 +16,7 @@ import {
   Request,
   User,
 } from '../database/entities';
-import type { RequestStatus, RoleCode } from '../database/entities';
+import type { RequestStatus, RoleScope } from '../database/entities';
 import { MailService } from '../mail/mail.service';
 import type { CreateRequestDto } from './dto/create-request.dto';
 import type { SortKey } from './dto/list-requests.dto';
@@ -29,7 +29,8 @@ import {
 
 export interface RequestViewer {
   id: string;
-  roleId: RoleCode;
+  /** Portail du rôle (ADR-004) : détermine la visibilité (CLIENT = sa propre organisation). */
+  scope: RoleScope;
   organizationId: string | null;
 }
 
@@ -55,7 +56,7 @@ export class RequestsService {
   // -------------------- Création --------------------
 
   async create(viewer: RequestViewer, dto: CreateRequestDto): Promise<Request> {
-    if (viewer.roleId !== 'CLIENT') {
+    if (viewer.scope !== 'CLIENT') {
       throw new ForbiddenException({
         code: 'ONLY_CLIENT_CAN_CREATE_REQUEST',
         message: 'Seul un Client peut créer une demande.',
@@ -213,7 +214,7 @@ export class RequestsService {
       .leftJoinAndSelect('r.effectivePriority', 'p')
       .where('r.deleted_at IS NULL');
 
-    if (viewer.roleId === 'CLIENT') {
+    if (viewer.scope === 'CLIENT') {
       // Le Client ne voit que les demandes de son organisation.
       if (!viewer.organizationId) {
         return { items: [], page_info: { has_next: false, next_cursor: null } };
@@ -222,7 +223,7 @@ export class RequestsService {
         orgId: viewer.organizationId,
       });
     }
-    // Les rôles internes (GESTIONNAIRE, RESPONSABLE, ADMIN, DG) voient tout.
+    // Les rôles internes (scope INTERNAL) voient tout.
     // Le périmètre par responsable affecté arrivera au S4 via un filtre dédié.
 
     if (params.status) {
@@ -293,7 +294,7 @@ export class RequestsService {
 
   private assertReadable(viewer: RequestViewer, req: Request): void {
     if (
-      viewer.roleId === 'CLIENT' &&
+      viewer.scope === 'CLIENT' &&
       req.organizationId !== viewer.organizationId
     ) {
       // On masque l'existence pour éviter l'énumération (CDC §10.3 [EXG-10-052]).

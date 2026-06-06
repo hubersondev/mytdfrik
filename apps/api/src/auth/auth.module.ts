@@ -13,7 +13,7 @@ import {
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RolesGuard } from './guards/roles.guard';
+import { PermissionsGuard } from './guards/permissions.guard';
 import { JwtStrategy } from './jwt.strategy';
 
 @Module({
@@ -41,9 +41,10 @@ import { JwtStrategy } from './jwt.strategy';
   providers: [
     AuthService,
     JwtStrategy,
-    // Guards globaux : auth puis RBAC (le RolesGuard ne déclenche que si @Roles est présent)
+    // Guards globaux : auth puis permissions (le PermissionsGuard ne déclenche
+    // que si @RequirePermissions est présent sur la route).
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
   exports: [AuthService],
 })
