@@ -11,8 +11,10 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   if (!session) {
     redirect('/login');
   }
-  if (session.user.roleId !== 'CLIENT') {
-    redirect('/login?denied=role');
+  // Espace Client : rôles de scope CLIENT (ADR-004). Un interne est renvoyé
+  // vers le portail Admin.
+  if (session.user.scope !== 'CLIENT') {
+    redirect('/admin');
   }
   const [theme, sidebarCollapsed] = await Promise.all([getTheme(), getSidebarCollapsed()]);
 

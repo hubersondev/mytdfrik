@@ -2,21 +2,13 @@
 
 import { redirect } from 'next/navigation';
 import { API_BASE } from '@/lib/api';
-import { setSession } from '@/lib/auth';
+import { setSession, type SessionUser } from '@/lib/auth';
 
 interface LoginResponse {
   access_token: string;
   refresh_token: string;
   expires_in: number;
-  user: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    roleId: 'CLIENT' | 'GESTIONNAIRE' | 'RESPONSABLE' | 'ADMIN' | 'DG';
-    organizationId: string | null;
-    timeZone: string;
-  };
+  user: SessionUser;
 }
 
 export interface LoginActionState {
@@ -64,10 +56,9 @@ export async function loginAction(
     user: data.user,
   });
 
-  // Routage post-login en fonction du rôle. Les rôles internes
-  // (GESTIONNAIRE/RESPONSABLE/DG) atterrissent sur /admin en attendant leurs
-  // propres espaces dédiés livrés dans les sprints suivants.
-  if (data.user.roleId === 'CLIENT') {
+  // Routage post-login selon le portail du rôle (ADR-004) :
+  // scope INTERNAL → espace Admin, scope CLIENT → espace Client.
+  if (data.user.scope === 'CLIENT') {
     redirect('/client');
   }
   redirect('/admin');

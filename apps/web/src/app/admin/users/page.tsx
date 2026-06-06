@@ -4,11 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { apiFetchOr } from '@/lib/api';
+import { fetchRoleOptions } from '@/lib/role-options';
 import {
   applyClientSideView,
   roleKeyFromQuery,
   roleVariant,
-  ROLE_LABELS,
   sortKeyFromQuery,
   statusKeyFromQuery,
   type CursorPage,
@@ -57,15 +57,17 @@ export default async function AdminUsersPage({
   const qs = new URLSearchParams({ limit: '100' });
   if (role !== 'ALL') qs.set('role', role);
 
-  const [usersPage, orgsPage] = await Promise.all([
+  const [usersPage, orgsPage, roles] = await Promise.all([
     apiFetchOr<CursorPage<UserRow>>(`/users?${qs.toString()}`, emptyPage<UserRow>()),
     apiFetchOr<CursorPage<OrganizationRow>>(
       '/organizations?limit=100',
       emptyPage<OrganizationRow>(),
     ),
+    fetchRoleOptions(),
   ]);
 
   const orgNameById = new Map(orgsPage.items.map((o) => [o.id, o.name]));
+  const roleLabelById = new Map(roles.map((r) => [r.id, r.label]));
   const rows = applyClientSideView(usersPage.items, { status, query, sort });
   const activeCount = usersPage.items.filter((u) => u.isActive).length;
 
@@ -101,7 +103,7 @@ export default async function AdminUsersPage({
       )}
       {params.updated && <SuccessBanner>Modifications enregistrées.</SuccessBanner>}
 
-      <UsersToolbar role={role} status={status} sort={sort} query={query} />
+      <UsersToolbar role={role} status={status} sort={sort} query={query} roles={roles} />
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
@@ -131,7 +133,7 @@ export default async function AdminUsersPage({
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={roleVariant(u.roleId)}>
-                      {ROLE_LABELS[u.roleId] ?? u.roleId}
+                      {roleLabelById.get(u.roleId) ?? u.roleId}
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">

@@ -11,8 +11,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (!session) {
     redirect('/login');
   }
-  if (session.user.roleId !== 'ADMIN') {
-    redirect('/login?denied=role');
+  // Portail interne : tout rôle de scope INTERNAL (ADR-004). Un Client est
+  // renvoyé vers son espace.
+  if (session.user.scope !== 'INTERNAL') {
+    redirect('/client');
   }
   const [theme, sidebarCollapsed] = await Promise.all([getTheme(), getSidebarCollapsed()]);
 
