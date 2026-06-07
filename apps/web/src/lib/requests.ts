@@ -49,6 +49,16 @@ export interface RequestDetail extends RequestSummary {
   clientContextNote: string | null;
   priorityOverrideReason: string | null;
   organizationId: string;
+  assignedToUserId: string | null;
+  qualifiedAt: string | null;
+  firstResponseAt: string | null;
+  resolvedAt: string | null;
+  closedAt: string | null;
+  reopenCount: number;
+  slaDueFirstResponseAt: string | null;
+  slaDueResolutionAt: string | null;
+  isSlaFirstResponseRespected: boolean | null;
+  isSlaResolutionRespected: boolean | null;
 }
 
 export const IMPACT_OPTIONS: Array<{

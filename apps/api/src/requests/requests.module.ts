@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   Category,
+  PriorityLevel,
   Request,
   RequestDraft,
   RequestStateHistory,
@@ -25,6 +26,7 @@ import { TransitionsService } from './transitions.service';
       RequestDraft,
       RequestStateHistory,
       Category,
+      PriorityLevel,
       User,
     ]),
   ],

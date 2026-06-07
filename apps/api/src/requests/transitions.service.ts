@@ -7,13 +7,20 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, IsNull, Repository } from 'typeorm';
-import { Request, RequestStateHistory, User } from '../database/entities';
+import {
+  PriorityLevel,
+  Request,
+  RequestStateHistory,
+  User,
+} from '../database/entities';
 import type {
   PriorityLevelCode,
   RequestStatus,
   RoleScope,
 } from '../database/entities';
 import type { ApplyTransitionDto } from './dto/apply-transition.dto';
+import { isWithinOneLevel } from './priority-matrix';
+import { computeDeadlines, shiftResolutionForWaiting } from './sla';
 import {
   isTransitionCode,
   resolveClientReplyTarget,
@@ -40,6 +47,8 @@ function bumpPriorityCapP1(current: PriorityLevelCode): PriorityLevelCode {
 
 const REOPEN_WINDOW_DAYS = 30;
 const MAX_REOPENS = 2;
+const OVERRIDE_REASON_MIN = 10;
+const OVERRIDE_REASON_MAX = 500;
 
 /**
  * Moteur de transitions de demandes (CDC §4). Fait foi côté serveur :
@@ -53,6 +62,8 @@ export class TransitionsService {
     @InjectRepository(User) private readonly users: Repository<User>,
     @InjectRepository(RequestStateHistory)
     private readonly history: Repository<RequestStateHistory>,
+    @InjectRepository(PriorityLevel)
+    private readonly priorities: Repository<PriorityLevel>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -208,19 +219,23 @@ export class TransitionsService {
       case 'T02': {
         req.qualifiedByUserId = viewer.id;
         req.qualifiedAt = now;
+        // Override borné ±1 + motif 10-500 (CDC §5.5).
         if (
           dto.effectivePriorityId &&
-          dto.effectivePriorityId !== req.effectivePriorityId
+          dto.effectivePriorityId !== req.systemPriorityId
         ) {
-          if (!note) {
-            throw new BadRequestException({
-              code: 'PRIORITY_OVERRIDE_REASON_REQUIRED',
-              message: 'Un motif est obligatoire pour ajuster la priorité.',
-            });
-          }
-          req.effectivePriorityId = dto.effectivePriorityId;
-          req.priorityOverrideReason = note;
+          this.applyPriorityOverride(req, dto.effectivePriorityId, note);
+        } else {
+          req.effectivePriorityId = req.systemPriorityId;
+          req.priorityOverrideReason = null;
         }
+        // Échéances SLA calculées à la qualification (CDC §5.8).
+        await this.computeAndSetDeadlines(req, req.createdAt);
+        // Le délai de prise en charge se mesure création → T02 (CDC §5.6.1).
+        req.isSlaFirstResponseRespected =
+          req.slaDueFirstResponseAt !== null
+            ? now.getTime() <= req.slaDueFirstResponseAt.getTime()
+            : null;
         break;
       }
       case 'T05':
@@ -242,19 +257,98 @@ export class TransitionsService {
         break;
       case 'T11':
         req.resolvedAt = now;
+        // Respect SLA résolution (hors attente client) évalué à la proposition.
+        req.isSlaResolutionRespected = this.isResolutionSlaRespected(req, now);
         break;
       case 'T16':
         req.closedAt = now;
         break;
       case 'T19':
         this.applyReopen(req, now);
+        await this.computeAndSetDeadlines(req, now);
         break;
       case 'CLIENT_REPLY':
-        // Reprise après attente client : on efface le marqueur.
+        // Reprise après attente client : on cumule le temps d'attente et on
+        // efface le marqueur (le temps en attente est exclu du SLA résolution).
+        this.accumulateWaiting(req, now);
         req.previousStatusBeforeWait = null;
         break;
       default:
         break;
+    }
+  }
+
+  /** Override Gestionnaire borné à ±1 niveau, motif 10-500 obligatoire. */
+  private applyPriorityOverride(
+    req: Request,
+    target: PriorityLevelCode,
+    note: string | null,
+  ): void {
+    if (
+      !note ||
+      note.length < OVERRIDE_REASON_MIN ||
+      note.length > OVERRIDE_REASON_MAX
+    ) {
+      throw new BadRequestException({
+        code: 'PRIORITY_OVERRIDE_REASON_INVALID',
+        message: `Le motif d'ajustement doit faire entre ${OVERRIDE_REASON_MIN} et ${OVERRIDE_REASON_MAX} caractères.`,
+      });
+    }
+    if (!isWithinOneLevel(req.systemPriorityId, target)) {
+      throw new BadRequestException({
+        code: 'PRIORITY_OVERRIDE_OUT_OF_BOUNDS',
+        message:
+          "L'ajustement est limité à un niveau au-dessus ou en dessous de la priorité système.",
+      });
+    }
+    req.effectivePriorityId = target;
+    req.priorityOverrideReason = note;
+  }
+
+  /** Pose first_response/resolution due dates depuis une date de référence. */
+  private async computeAndSetDeadlines(
+    req: Request,
+    from: Date,
+  ): Promise<void> {
+    const level = await this.priorities.findOne({
+      where: { id: req.effectivePriorityId },
+    });
+    if (!level) return;
+    const deadlines = computeDeadlines(from, {
+      slaFirstResponseMinutes: level.slaFirstResponseMinutes,
+      slaResolutionMinutes: level.slaResolutionMinutes,
+      is24x7: level.is24x7,
+    });
+    req.slaDueFirstResponseAt = deadlines.firstResponseDueAt;
+    // L'échéance de résolution tient compte du temps déjà passé en attente client.
+    const waitingMs = Number(req.waitingClientTotalMs ?? 0);
+    req.slaDueResolutionAt = shiftResolutionForWaiting(
+      deadlines.resolutionDueAt,
+      waitingMs,
+      level.is24x7,
+    );
+  }
+
+  private isResolutionSlaRespected(
+    req: Request,
+    resolvedAt: Date,
+  ): boolean | null {
+    if (!req.slaDueResolutionAt) return null;
+    return resolvedAt.getTime() <= req.slaDueResolutionAt.getTime();
+  }
+
+  /** Cumule la durée passée en EN_ATTENTE_CLIENT depuis la dernière entrée. */
+  private accumulateWaiting(req: Request, now: Date): void {
+    // Approximation : durée depuis updated_at (dernier passage en attente).
+    const since = req.updatedAt?.getTime() ?? now.getTime();
+    const deltaMs = Math.max(0, now.getTime() - since);
+    const current = Number(req.waitingClientTotalMs ?? 0);
+    req.waitingClientTotalMs = String(current + deltaMs);
+    if (req.slaDueResolutionAt && deltaMs > 0) {
+      // Décale l'échéance de résolution du temps d'attente client.
+      req.slaDueResolutionAt = new Date(
+        req.slaDueResolutionAt.getTime() + deltaMs,
+      );
     }
   }
 

@@ -97,6 +97,7 @@ export class RequestsController {
         limit: query.limit,
         status: statusList,
         sort: query.sort,
+        assignedToMe: query.assignee === 'me',
       },
     );
   }

@@ -38,4 +38,13 @@ export class ListRequestsQueryDto extends CursorPaginationDto {
   @IsOptional()
   @IsEnum(SORT_KEYS)
   sort?: SortKey;
+
+  @ApiProperty({
+    required: false,
+    description:
+      "Filtre d'affectation : `me` = demandes affectées à l'utilisateur courant.",
+  })
+  @IsOptional()
+  @IsString()
+  assignee?: string;
 }

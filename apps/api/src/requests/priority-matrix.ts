@@ -38,13 +38,24 @@ const MATRIX: Record<ImpactValue, Record<UrgencyValue, PriorityLevelCode>> = {
   },
 };
 
-const PRIORITY_ORDER: Record<PriorityLevelCode, number> = {
+export const PRIORITY_ORDER: Record<PriorityLevelCode, number> = {
   P0: 0,
   P1: 1,
   P2: 2,
   P3: 3,
   P4: 4,
 };
+
+/**
+ * Vrai si `target` ne s'écarte de `reference` que d'un niveau au plus
+ * (override Gestionnaire borné ±1 — CDC §5.5 [EXG-05-061]).
+ */
+export function isWithinOneLevel(
+  reference: PriorityLevelCode,
+  target: PriorityLevelCode,
+): boolean {
+  return Math.abs(PRIORITY_ORDER[reference] - PRIORITY_ORDER[target]) <= 1;
+}
 
 /** Priorité brute issue de la matrice (sans pondération catégorie). */
 export function priorityFromMatrix(

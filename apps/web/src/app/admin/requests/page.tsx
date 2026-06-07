@@ -19,15 +19,26 @@ const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyl
 export default async function AdminRequestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; sort?: string }>;
+  searchParams: Promise<{ status?: string; sort?: string; assignee?: string }>;
 }) {
   const params = await searchParams;
   const bucket = bucketKeyFromQuery(params.status);
   const sort = sortKeyFromQuery(params.sort);
+  const mine = params.assignee === 'me';
 
   const qs = new URLSearchParams({ limit: '100' });
   if (params.status) qs.set('status', params.status);
   if (sort !== DEFAULT_SORT) qs.set('sort', sort);
+  if (mine) qs.set('assignee', 'me');
+
+  const tabQuery = (assignee: boolean) => {
+    const p = new URLSearchParams();
+    if (params.status) p.set('status', params.status);
+    if (params.sort) p.set('sort', params.sort);
+    if (assignee) p.set('assignee', 'me');
+    const s = p.toString();
+    return s ? `/admin/requests?${s}` : '/admin/requests';
+  };
 
   const page = await apiFetchOr<CursorPage<RequestSummary>>(`/requests?${qs.toString()}`, {
     items: [],
@@ -56,7 +67,29 @@ export default async function AdminRequestsPage({
         </p>
       </header>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
+          <Link
+            href={tabQuery(false)}
+            className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+              !mine
+                ? 'bg-leaf-700 text-white'
+                : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+            }`}
+          >
+            Toutes
+          </Link>
+          <Link
+            href={tabQuery(true)}
+            className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+              mine
+                ? 'bg-leaf-700 text-white'
+                : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+            }`}
+          >
+            Affectées à moi
+          </Link>
+        </div>
         <FilterMenu current={bucket} />
         <SortMenu current={sort} />
       </div>
