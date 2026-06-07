@@ -20,6 +20,7 @@ export type {
   RequestStatus,
 } from './request.entity';
 export { RequestDraft } from './request-draft.entity';
+export { RequestStateHistory } from './request-state-history.entity';
 export { Role, ROLE_CODES, ROLE_SCOPES } from './role.entity';
 export type { RoleCode, RoleScope } from './role.entity';
 export { RolePermission } from './role-permission.entity';

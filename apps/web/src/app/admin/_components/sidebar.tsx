@@ -35,7 +35,7 @@ const NAV_ADMIN: NavItem[] = [
   { label: 'Tableau de bord', href: '/admin', icon: LayoutDashboard },
   { label: 'Utilisateurs', href: '/admin/users', icon: Users },
   { label: 'Organisations', href: '/admin/organizations', icon: Building2 },
-  { label: 'Demandes', href: '/admin/requests', icon: TicketCheck, badge: 'S4' },
+  { label: 'Demandes', href: '/admin/requests', icon: TicketCheck },
   { label: 'Bugs', href: '/admin/bugs', icon: Bug, badge: 'S7' },
 ];
 

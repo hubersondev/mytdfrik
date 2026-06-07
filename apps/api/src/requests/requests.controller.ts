@@ -16,11 +16,16 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
+import { ApplyTransitionDto } from './dto/apply-transition.dto';
 import { DraftsService } from './drafts.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpsertDraftDto } from './dto/draft.dto';
 import { ListRequestsQueryDto } from './dto/list-requests.dto';
 import { RequestsService } from './requests.service';
+import {
+  TransitionsService,
+  type TransitionViewer,
+} from './transitions.service';
 
 @ApiTags('requests')
 @ApiBearerAuth()
@@ -31,7 +36,17 @@ export class RequestsController {
   constructor(
     private readonly service: RequestsService,
     private readonly drafts: DraftsService,
+    private readonly transitions: TransitionsService,
   ) {}
+
+  private viewer(user: AuthenticatedUser): TransitionViewer {
+    return {
+      id: user.id,
+      scope: user.scope,
+      permissions: user.permissions,
+      organizationId: user.organizationId,
+    };
+  }
 
   // -------------------- Demandes --------------------
 
@@ -116,6 +131,42 @@ export class RequestsController {
       },
       id,
     );
+  }
+
+  // -------------------- Cycle de vie (CDC §4) --------------------
+
+  @Get(':id/transitions')
+  @ApiOperation({
+    summary: 'Transitions applicables par l’utilisateur courant',
+  })
+  availableTransitions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.transitions.availableTransitions(this.viewer(user), id);
+  }
+
+  @Get(':id/history')
+  @ApiOperation({ summary: "Historique des transitions d'une demande" })
+  history(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.transitions.listHistory(this.viewer(user), id);
+  }
+
+  @Post(':id/transitions/:code')
+  @ApiOperation({
+    summary:
+      'Applique une transition (moteur d’états ; 409 sur conflit, 403 si non autorisé)',
+  })
+  applyTransition(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('code') code: string,
+    @Body() dto: ApplyTransitionDto,
+  ) {
+    return this.transitions.apply(this.viewer(user), id, code, dto);
   }
 
   // -------------------- Brouillons (Client uniquement) --------------------

@@ -1,21 +1,35 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Category, Request, RequestDraft, User } from '../database/entities';
+import {
+  Category,
+  Request,
+  RequestDraft,
+  RequestStateHistory,
+  User,
+} from '../database/entities';
 import { DraftsService } from './drafts.service';
 import { RequestsController } from './requests.controller';
 import { RequestsService } from './requests.service';
+import { TransitionsService } from './transitions.service';
 
 /**
  * Module des demandes (CDC §3, §4, §5, §6, §9.4).
  *
- * Sprint 3 livre : création par le Client + lecture par le propriétaire +
- * brouillons. Les transitions de la machine à états et la gestion par
- * les rôles internes arrivent au S4-S7.
+ * - Sprint 3 : création par le Client, lecture par le propriétaire, brouillons.
+ * - Sprint 4 : moteur de transitions (machine à états §4) + historique.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([Request, RequestDraft, Category, User])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Request,
+      RequestDraft,
+      RequestStateHistory,
+      Category,
+      User,
+    ]),
+  ],
   controllers: [RequestsController],
-  providers: [RequestsService, DraftsService],
-  exports: [RequestsService],
+  providers: [RequestsService, DraftsService, TransitionsService],
+  exports: [RequestsService, TransitionsService],
 })
 export class RequestsModule {}
