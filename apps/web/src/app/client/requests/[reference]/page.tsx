@@ -4,7 +4,10 @@ import { notFound } from 'next/navigation';
 import { Badge, priorityVariant } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { apiFetch, type ApiError } from '@/lib/api';
+import { MessageThread } from '@/components/message-thread/message-thread';
+import { apiFetch, apiFetchOr, type ApiError } from '@/lib/api';
+import { getSession } from '@/lib/auth';
+import type { MessageView } from '@/lib/messages';
 import {
   IMPACT_OPTIONS,
   URGENCY_OPTIONS,
@@ -40,6 +43,11 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
     }
     throw error;
   }
+
+  const [messages, session] = await Promise.all([
+    apiFetchOr<MessageView[]>(`/requests/${request.id}/messages`, []),
+    getSession(),
+  ]);
 
   const impactLabel =
     IMPACT_OPTIONS.find((o) => o.value === request.impact)?.label ?? request.impact;
@@ -149,19 +157,13 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
         </Card>
       </div>
 
-      <Card className="border-dashed bg-transparent">
-        <div className="flex items-start gap-3 p-5">
-          <Clock className="mt-0.5 h-4 w-4 text-zinc-400" />
-          <div className="text-sm text-zinc-600 dark:text-zinc-400">
-            <p className="font-medium text-zinc-700 dark:text-zinc-300">Prochaines étapes</p>
-            <p className="mt-1">
-              Un Gestionnaire qualifie votre demande, l&apos;affecte à un Responsable, puis le suivi
-              détaillé (messagerie, pièces jointes, historique) sera activé dans les prochains
-              sprints.
-            </p>
-          </div>
-        </div>
-      </Card>
+      <MessageThread
+        requestId={request.id}
+        revalidatePath={`/client/requests/${request.publicReference}`}
+        messages={messages}
+        currentUserId={session?.user.id ?? ''}
+        canPostInternal={false}
+      />
     </div>
   );
 }

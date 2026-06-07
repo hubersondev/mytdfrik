@@ -60,6 +60,12 @@ export const PERMISSION_CATALOG: readonly PermissionDef[] = [
     group: 'Demandes',
     scope: 'INTERNAL',
   },
+  {
+    code: 'requests.message',
+    label: 'Échanger des messages sur une demande (dont messages internes)',
+    group: 'Demandes',
+    scope: 'INTERNAL',
+  },
   // ---------- Utilisateurs ----------
   {
     code: 'users.read',

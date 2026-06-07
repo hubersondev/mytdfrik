@@ -19,10 +19,16 @@ const DEFAULTS: Record<string, string[]> = {
     'requests.read.all',
     'requests.qualify',
     'requests.assign',
+    'requests.message',
     'users.read',
     'organizations.read',
   ],
-  RESPONSABLE: ['requests.read.all', 'requests.process', 'requests.close'],
+  RESPONSABLE: [
+    'requests.read.all',
+    'requests.process',
+    'requests.close',
+    'requests.message',
+  ],
   DG: ['requests.read.all', 'audit.read'],
 };
 
