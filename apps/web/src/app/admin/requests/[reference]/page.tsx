@@ -4,7 +4,10 @@ import { notFound } from 'next/navigation';
 import { Badge, priorityVariant } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { MessageThread } from '@/components/message-thread/message-thread';
 import { apiFetch, apiFetchOr, type ApiError } from '@/lib/api';
+import { getSession } from '@/lib/auth';
+import type { MessageView } from '@/lib/messages';
 import { fetchRoleOptions } from '@/lib/role-options';
 import {
   IMPACT_OPTIONS,
@@ -47,7 +50,7 @@ export default async function AdminRequestDetailPage({
     throw error;
   }
 
-  const [codes, history, usersPage, roles] = await Promise.all([
+  const [codes, history, usersPage, roles, messages, session] = await Promise.all([
     apiFetchOr<string[]>(`/requests/${request.id}/transitions`, []),
     apiFetchOr<HistoryEntry[]>(`/requests/${request.id}/history`, []),
     apiFetchOr<CursorPage<UserRow>>('/users?limit=100', {
@@ -55,6 +58,8 @@ export default async function AdminRequestDetailPage({
       page_info: { has_next: false, next_cursor: null },
     }),
     fetchRoleOptions(),
+    apiFetchOr<MessageView[]>(`/requests/${request.id}/messages`, []),
+    getSession(),
   ]);
 
   // Responsables affectables = utilisateurs actifs dont le rôle est interne.
@@ -169,6 +174,14 @@ export default async function AdminRequestDetailPage({
               )}
             </ol>
           </Card>
+
+          <MessageThread
+            requestId={request.id}
+            revalidatePath={`/admin/requests/${request.publicReference}`}
+            messages={messages}
+            currentUserId={session?.user.id ?? ''}
+            canPostInternal
+          />
         </div>
 
         <div className="flex flex-col gap-6">

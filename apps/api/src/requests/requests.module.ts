@@ -5,10 +5,12 @@ import {
   PriorityLevel,
   Request,
   RequestDraft,
+  RequestMessage,
   RequestStateHistory,
   User,
 } from '../database/entities';
 import { DraftsService } from './drafts.service';
+import { MessagesService } from './messages.service';
 import { RequestsController } from './requests.controller';
 import { RequestsService } from './requests.service';
 import { TransitionsService } from './transitions.service';
@@ -24,6 +26,7 @@ import { TransitionsService } from './transitions.service';
     TypeOrmModule.forFeature([
       Request,
       RequestDraft,
+      RequestMessage,
       RequestStateHistory,
       Category,
       PriorityLevel,
@@ -31,7 +34,12 @@ import { TransitionsService } from './transitions.service';
     ]),
   ],
   controllers: [RequestsController],
-  providers: [RequestsService, DraftsService, TransitionsService],
-  exports: [RequestsService, TransitionsService],
+  providers: [
+    RequestsService,
+    DraftsService,
+    TransitionsService,
+    MessagesService,
+  ],
+  exports: [RequestsService, TransitionsService, MessagesService],
 })
 export class RequestsModule {}

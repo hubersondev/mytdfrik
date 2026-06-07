@@ -21,6 +21,8 @@ import { DraftsService } from './drafts.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpsertDraftDto } from './dto/draft.dto';
 import { ListRequestsQueryDto } from './dto/list-requests.dto';
+import { CreateMessageDto, WithdrawMessageDto } from './dto/message.dto';
+import { MessagesService } from './messages.service';
 import { RequestsService } from './requests.service';
 import {
   TransitionsService,
@@ -37,6 +39,7 @@ export class RequestsController {
     private readonly service: RequestsService,
     private readonly drafts: DraftsService,
     private readonly transitions: TransitionsService,
+    private readonly messages: MessagesService,
   ) {}
 
   private viewer(user: AuthenticatedUser): TransitionViewer {
@@ -168,6 +171,41 @@ export class RequestsController {
     @Body() dto: ApplyTransitionDto,
   ) {
     return this.transitions.apply(this.viewer(user), id, code, dto);
+  }
+
+  // -------------------- Messagerie (CDC §3.7) --------------------
+
+  @Get(':id/messages')
+  @ApiOperation({
+    summary: "Messages d'une demande (internes masqués au Client)",
+  })
+  listMessages(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.messages.list(this.viewer(user), id);
+  }
+
+  @Post(':id/messages')
+  @ApiOperation({ summary: 'Publie un message sur une demande' })
+  postMessage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: CreateMessageDto,
+  ) {
+    return this.messages.create(this.viewer(user), id, dto);
+  }
+
+  @Post('messages/:messageId/withdraw')
+  @ApiOperation({
+    summary: 'Retire un message (auteur uniquement, motif requis)',
+  })
+  withdrawMessage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('messageId', new ParseUUIDPipe()) messageId: string,
+    @Body() dto: WithdrawMessageDto,
+  ) {
+    return this.messages.withdraw(this.viewer(user), messageId, dto);
   }
 
   // -------------------- Brouillons (Client uniquement) --------------------
