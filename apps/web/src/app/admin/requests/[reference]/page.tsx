@@ -178,7 +178,10 @@ export default async function AdminRequestDetailPage({
             currentStatus={request.status}
             codes={codes}
             assignees={assignees}
+            systemPriority={request.systemPriorityId}
           />
+
+          <SlaCard request={request} />
 
           <Card>
             <div className="p-5">
@@ -221,5 +224,62 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <dt className="text-xs text-zinc-500 dark:text-zinc-400">{label}</dt>
       <dd className="text-right text-zinc-900 dark:text-zinc-100">{children}</dd>
     </div>
+  );
+}
+
+function SlaBadge({ value, dueAt }: { value: boolean | null; dueAt: string | null }) {
+  if (value === true) return <Badge variant="success">Respecté</Badge>;
+  if (value === false) return <Badge variant="danger">Dépassé</Badge>;
+  if (dueAt) {
+    const late = new Date(dueAt).getTime() < new Date().getTime();
+    return <Badge variant={late ? 'danger' : 'outline'}>{late ? 'En retard' : 'En cours'}</Badge>;
+  }
+  return <span className="text-xs text-zinc-400">—</span>;
+}
+
+function SlaCard({ request }: { request: RequestDetail }) {
+  const hasSla = request.slaDueFirstResponseAt || request.slaDueResolutionAt;
+  return (
+    <Card>
+      <div className="flex items-center gap-2 p-5 pb-3">
+        <Clock className="h-4 w-4 text-sand-700 dark:text-sand-300" />
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          Engagements de service
+        </h2>
+      </div>
+      <Separator />
+      <div className="flex flex-col gap-3 p-5 text-sm">
+        {!hasSla && (
+          <p className="text-zinc-500 dark:text-zinc-400">
+            Les échéances sont calculées à la qualification de la demande.
+          </p>
+        )}
+        {request.slaDueFirstResponseAt && (
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">Prise en charge</dt>
+              <dd className="text-zinc-900 dark:text-zinc-100">
+                {dateFmt.format(new Date(request.slaDueFirstResponseAt))}
+              </dd>
+            </div>
+            <SlaBadge
+              value={request.isSlaFirstResponseRespected}
+              dueAt={request.slaDueFirstResponseAt}
+            />
+          </div>
+        )}
+        {request.slaDueResolutionAt && (
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">Résolution</dt>
+              <dd className="text-zinc-900 dark:text-zinc-100">
+                {dateFmt.format(new Date(request.slaDueResolutionAt))}
+              </dd>
+            </div>
+            <SlaBadge value={request.isSlaResolutionRespected} dueAt={request.slaDueResolutionAt} />
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }

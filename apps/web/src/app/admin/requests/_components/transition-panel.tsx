@@ -24,14 +24,29 @@ interface Props {
   codes: string[];
   /** Responsables affectables (pour T06). */
   assignees: AssigneeOption[];
+  /** Priorité système — l'ajustement T02 est borné à ±1 niveau (CDC §5.5). */
+  systemPriority: PriorityCode;
 }
 
-const PRIORITIES: PriorityCode[] = ['P0', 'P1', 'P2', 'P3', 'P4'];
+const PRIORITY_ORDER: PriorityCode[] = ['P0', 'P1', 'P2', 'P3', 'P4'];
+
+/** Priorités proposables : système ±1 niveau (override Gestionnaire borné). */
+function priorityChoices(system: PriorityCode): PriorityCode[] {
+  const idx = PRIORITY_ORDER.indexOf(system);
+  return PRIORITY_ORDER.filter((_, i) => Math.abs(i - idx) <= 1);
+}
 
 const FIELD_CLASS =
   'mt-1 flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:focus-visible:ring-zinc-100';
 
-export function TransitionPanel({ reference, requestId, currentStatus, codes, assignees }: Props) {
+export function TransitionPanel({
+  reference,
+  requestId,
+  currentStatus,
+  codes,
+  assignees,
+  systemPriority,
+}: Props) {
   const router = useRouter();
   const [active, setActive] = useState<string | null>(null);
   const [note, setNote] = useState('');
@@ -155,13 +170,16 @@ export function TransitionPanel({ reference, requestId, currentStatus, codes, as
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as PriorityCode | '')}
               >
-                <option value="">— Conserver la priorité système —</option>
-                {PRIORITIES.map((p) => (
+                <option value="">— Conserver la priorité système ({systemPriority}) —</option>
+                {priorityChoices(systemPriority).map((p) => (
                   <option key={p} value={p}>
                     {priorityLabel(p)}
                   </option>
                 ))}
               </select>
+              <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                Ajustement borné à un niveau ; motif obligatoire (10-500 caractères).
+              </p>
             </div>
           )}
 

@@ -202,6 +202,7 @@ export class RequestsService {
       limit?: number;
       status?: string | string[];
       sort?: SortKey;
+      assignedToMe?: boolean;
     },
   ): Promise<CursorPage<Request>> {
     const limit = params.limit ?? 25;
@@ -223,8 +224,11 @@ export class RequestsService {
         orgId: viewer.organizationId,
       });
     }
-    // Les rôles internes (scope INTERNAL) voient tout.
-    // Le périmètre par responsable affecté arrivera au S4 via un filtre dédié.
+    // Les rôles internes (scope INTERNAL) voient tout ; le filtre « affectées
+    // à moi » restreint à la file personnelle du Responsable (CDC §S5).
+    if (params.assignedToMe && viewer.scope === 'INTERNAL') {
+      qb.andWhere('r.assigned_to_user_id = :me', { me: viewer.id });
+    }
 
     if (params.status) {
       const statuses = Array.isArray(params.status)
