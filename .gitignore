@@ -38,6 +38,9 @@ logs/
 
 # Test coverage
 coverage/
+
+# Stockage local des pièces jointes (driver dev, CDC §3.8)
+.storage/
 .nyc_output/
 *.lcov
 

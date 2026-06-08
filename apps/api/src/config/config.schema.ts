@@ -58,6 +58,29 @@ export const configValidationSchema = Joi.object({
   // URL publique du front (sert à construire les liens dans les courriels)
   APP_WEB_BASE_URL: Joi.string().uri().default('http://localhost:3001'),
 
+  // URL publique de l'API (sert à construire les liens de téléchargement signés)
+  API_PUBLIC_BASE_URL: Joi.string().uri().default('http://localhost:3000'),
+
+  // Pièces jointes & stockage (CDC §3.8, §11.4)
+  // En dev, le driver « local » écrit sur le disque ; « s3 » (Scaleway Object
+  // Storage) sera branché en staging/prod via @aws-sdk/client-s3.
+  STORAGE_DRIVER: Joi.string().valid('local', 's3').default('local'),
+  STORAGE_LOCAL_DIR: Joi.string().default('.storage'),
+  S3_BUCKET: Joi.string().optional().allow(''),
+  S3_REGION: Joi.string().optional().allow(''),
+  S3_ENDPOINT: Joi.string().uri().optional().allow(''),
+  S3_ACCESS_KEY_ID: Joi.string().optional().allow(''),
+  S3_SECRET_ACCESS_KEY: Joi.string().optional().allow(''),
+  ATTACHMENT_MAX_FILE_BYTES: Joi.number().integer().min(1).default(26_214_400), // 25 Mio par fichier [EXG-03-062]
+  ATTACHMENT_MAX_REQUEST_BYTES: Joi.number()
+    .integer()
+    .min(1)
+    .default(104_857_600), // 100 Mio cumulés par demande [EXG-03-062]
+  ATTACHMENT_DOWNLOAD_TTL_SECONDS: Joi.number().integer().min(60).default(300), // URL de téléchargement signée valide 5 min [EXG-03-064]
+  // Scan antivirus simulé en dev (ClamAV indisponible en local) : délai avant
+  // de passer PENDING → CLEAN. Mettre 0 pour un scan immédiat (tests).
+  ANTIVIRUS_SIMULATED_DELAY_MS: Joi.number().integer().min(0).default(1_500),
+
   // Bootstrap : compte admin de démarrage (utilisé par les seeds)
   ADMIN_BOOTSTRAP_EMAIL: Joi.string().email().optional(),
   ADMIN_BOOTSTRAP_PASSWORD: Joi.string().min(12).optional(),

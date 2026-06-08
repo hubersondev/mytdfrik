@@ -66,6 +66,12 @@ export const PERMISSION_CATALOG: readonly PermissionDef[] = [
     group: 'Demandes',
     scope: 'INTERNAL',
   },
+  {
+    code: 'requests.attachment',
+    label: 'Ajouter des pièces jointes à une demande',
+    group: 'Demandes',
+    scope: 'INTERNAL',
+  },
   // ---------- Utilisateurs ----------
   {
     code: 'users.read',
