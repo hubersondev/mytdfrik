@@ -62,8 +62,12 @@ export async function apiFetch<T>(
   const raw = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   const session: SessionPayload | null = raw ? safeParseJson<SessionPayload>(raw) : null;
 
+  // Pour un envoi multipart (FormData), on laisse fetch positionner lui-même
+  // le Content-Type avec la boundary ; forcer application/json casserait l'upload.
+  const isFormData = rest.body instanceof FormData;
+
   const finalHeaders: HeadersInit = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(auth && session?.accessToken ? { Authorization: `Bearer ${session.accessToken}` } : {}),
     ...headers,
   };

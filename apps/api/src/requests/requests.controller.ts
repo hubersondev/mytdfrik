@@ -11,13 +11,29 @@ import {
   Post,
   Put,
   Query,
+  Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import type { Response } from 'express';
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
+import {
+  AttachmentsService,
+  type UploadedFileLike,
+} from './attachments.service';
 import { ApplyTransitionDto } from './dto/apply-transition.dto';
 import { DraftsService } from './drafts.service';
+import { WithdrawAttachmentDto } from './dto/attachment.dto';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpsertDraftDto } from './dto/draft.dto';
 import { ListRequestsQueryDto } from './dto/list-requests.dto';
@@ -28,6 +44,9 @@ import {
   TransitionsService,
   type TransitionViewer,
 } from './transitions.service';
+
+// Garde-fou Multer (le service applique la limite précise et le message clair).
+const MULTER_MAX_BYTES = 26_214_400; // 25 Mio
 
 @ApiTags('requests')
 @ApiBearerAuth()
@@ -40,6 +59,7 @@ export class RequestsController {
     private readonly drafts: DraftsService,
     private readonly transitions: TransitionsService,
     private readonly messages: MessagesService,
+    private readonly attachments: AttachmentsService,
   ) {}
 
   private viewer(user: AuthenticatedUser): TransitionViewer {
@@ -206,6 +226,69 @@ export class RequestsController {
     @Body() dto: WithdrawMessageDto,
   ) {
     return this.messages.withdraw(this.viewer(user), messageId, dto);
+  }
+
+  // -------------------- Pièces jointes (CDC §3.8) --------------------
+
+  // NB : la route publique de téléchargement doit précéder ':id/...' pour ne
+  // pas être capturée comme un identifiant de demande.
+  @Get('attachments/download')
+  @Public()
+  @ApiOperation({
+    summary: 'Télécharge une pièce jointe via une URL signée et expirante',
+  })
+  async downloadAttachment(
+    @Query('id') id: string,
+    @Query('exp') exp: string,
+    @Query('sig') sig: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const payload = await this.attachments.resolveSignedDownload(
+      id,
+      Number(exp),
+      sig,
+    );
+    res.setHeader('Content-Type', payload.mimeType);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${encodeURIComponent(payload.filename)}"`,
+    );
+    res.send(payload.buffer);
+  }
+
+  @Get(':id/attachments')
+  @ApiOperation({ summary: "Pièces jointes d'une demande" })
+  listAttachments(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.attachments.list(this.viewer(user), id);
+  }
+
+  @Post(':id/attachments')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MULTER_MAX_BYTES } }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Téléverse une pièce jointe sur une demande' })
+  uploadAttachment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @UploadedFile() file: UploadedFileLike | undefined,
+  ) {
+    return this.attachments.upload(this.viewer(user), id, file);
+  }
+
+  @Post('attachments/:attachmentId/withdraw')
+  @ApiOperation({
+    summary: 'Retire une pièce jointe (auteur uniquement, motif requis)',
+  })
+  withdrawAttachment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('attachmentId', new ParseUUIDPipe()) attachmentId: string,
+    @Body() dto: WithdrawAttachmentDto,
+  ) {
+    return this.attachments.withdraw(this.viewer(user), attachmentId, dto);
   }
 
   // -------------------- Brouillons (Client uniquement) --------------------

@@ -4,8 +4,10 @@ import { notFound } from 'next/navigation';
 import { Badge, priorityVariant } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { AttachmentPanel } from '@/components/attachment-panel/attachment-panel';
 import { MessageThread } from '@/components/message-thread/message-thread';
 import { apiFetch, apiFetchOr, type ApiError } from '@/lib/api';
+import type { AttachmentView } from '@/lib/attachments';
 import { getSession } from '@/lib/auth';
 import type { MessageView } from '@/lib/messages';
 import { fetchRoleOptions } from '@/lib/role-options';
@@ -50,7 +52,7 @@ export default async function AdminRequestDetailPage({
     throw error;
   }
 
-  const [codes, history, usersPage, roles, messages, session] = await Promise.all([
+  const [codes, history, usersPage, roles, messages, attachments, session] = await Promise.all([
     apiFetchOr<string[]>(`/requests/${request.id}/transitions`, []),
     apiFetchOr<HistoryEntry[]>(`/requests/${request.id}/history`, []),
     apiFetchOr<CursorPage<UserRow>>('/users?limit=100', {
@@ -59,6 +61,7 @@ export default async function AdminRequestDetailPage({
     }),
     fetchRoleOptions(),
     apiFetchOr<MessageView[]>(`/requests/${request.id}/messages`, []),
+    apiFetchOr<AttachmentView[]>(`/requests/${request.id}/attachments`, []),
     getSession(),
   ]);
 
@@ -174,6 +177,14 @@ export default async function AdminRequestDetailPage({
               )}
             </ol>
           </Card>
+
+          <AttachmentPanel
+            requestId={request.id}
+            revalidatePath={`/admin/requests/${request.publicReference}`}
+            attachments={attachments}
+            currentUserId={session?.user.id ?? ''}
+            canUpload
+          />
 
           <MessageThread
             requestId={request.id}

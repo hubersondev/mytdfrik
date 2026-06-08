@@ -20,6 +20,7 @@ const DEFAULTS: Record<string, string[]> = {
     'requests.qualify',
     'requests.assign',
     'requests.message',
+    'requests.attachment',
     'users.read',
     'organizations.read',
   ],
@@ -28,6 +29,7 @@ const DEFAULTS: Record<string, string[]> = {
     'requests.process',
     'requests.close',
     'requests.message',
+    'requests.attachment',
   ],
   DG: ['requests.read.all', 'audit.read'],
 };

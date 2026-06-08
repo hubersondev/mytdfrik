@@ -4,8 +4,10 @@ import { notFound } from 'next/navigation';
 import { Badge, priorityVariant } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { AttachmentPanel } from '@/components/attachment-panel/attachment-panel';
 import { MessageThread } from '@/components/message-thread/message-thread';
 import { apiFetch, apiFetchOr, type ApiError } from '@/lib/api';
+import type { AttachmentView } from '@/lib/attachments';
 import { getSession } from '@/lib/auth';
 import type { MessageView } from '@/lib/messages';
 import {
@@ -44,8 +46,9 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
     throw error;
   }
 
-  const [messages, session] = await Promise.all([
+  const [messages, attachments, session] = await Promise.all([
     apiFetchOr<MessageView[]>(`/requests/${request.id}/messages`, []),
+    apiFetchOr<AttachmentView[]>(`/requests/${request.id}/attachments`, []),
     getSession(),
   ]);
 
@@ -156,6 +159,14 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
           </div>
         </Card>
       </div>
+
+      <AttachmentPanel
+        requestId={request.id}
+        revalidatePath={`/client/requests/${request.publicReference}`}
+        attachments={attachments}
+        currentUserId={session?.user.id ?? ''}
+        canUpload
+      />
 
       <MessageThread
         requestId={request.id}

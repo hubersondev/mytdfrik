@@ -19,6 +19,8 @@ export type {
   UrgencyValue,
   RequestStatus,
 } from './request.entity';
+export { RequestAttachment } from './request-attachment.entity';
+export type { AntivirusStatus } from './request-attachment.entity';
 export { RequestDraft } from './request-draft.entity';
 export { RequestMessage } from './request-message.entity';
 export { RequestStateHistory } from './request-state-history.entity';
