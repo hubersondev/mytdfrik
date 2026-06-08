@@ -3,6 +3,7 @@ export { AuditLog } from './audit-log.entity';
 export { Category } from './category.entity';
 export { City } from './city.entity';
 export { Country } from './country.entity';
+export { Evaluation } from './evaluation.entity';
 export { Organization } from './organization.entity';
 export { PasswordResetToken } from './password-reset-token.entity';
 export { PriorityLevel, PRIORITY_LEVEL_CODES } from './priority-level.entity';
@@ -21,6 +22,11 @@ export type {
 } from './request.entity';
 export { RequestAttachment } from './request-attachment.entity';
 export type { AntivirusStatus } from './request-attachment.entity';
+export {
+  RequestBugDetail,
+  IS_REPRODUCED_VALUES,
+} from './request-bug-detail.entity';
+export type { IsReproducedValue } from './request-bug-detail.entity';
 export { RequestDraft } from './request-draft.entity';
 export { RequestMessage } from './request-message.entity';
 export { RequestStateHistory } from './request-state-history.entity';

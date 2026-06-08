@@ -2,9 +2,12 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   Category,
+  Evaluation,
   PriorityLevel,
+  Product,
   Request,
   RequestAttachment,
+  RequestBugDetail,
   RequestDraft,
   RequestMessage,
   RequestStateHistory,
@@ -12,7 +15,10 @@ import {
 } from '../database/entities';
 import { StorageModule } from '../storage/storage.module';
 import { AttachmentsService } from './attachments.service';
+import { BugDetailsService } from './bug-details.service';
 import { DraftsService } from './drafts.service';
+import { EvaluationsService } from './evaluations.service';
+import { ExpirationService } from './expiration.service';
 import { MessagesService } from './messages.service';
 import { RequestsController } from './requests.controller';
 import { RequestsService } from './requests.service';
@@ -33,8 +39,11 @@ import { TransitionsService } from './transitions.service';
       RequestDraft,
       RequestMessage,
       RequestAttachment,
+      RequestBugDetail,
       RequestStateHistory,
+      Evaluation,
       Category,
+      Product,
       PriorityLevel,
       User,
     ]),
@@ -47,6 +56,9 @@ import { TransitionsService } from './transitions.service';
     TransitionsService,
     MessagesService,
     AttachmentsService,
+    BugDetailsService,
+    EvaluationsService,
+    ExpirationService,
   ],
   exports: [RequestsService, TransitionsService, MessagesService],
 })

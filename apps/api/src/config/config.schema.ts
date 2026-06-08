@@ -58,6 +58,10 @@ export const configValidationSchema = Joi.object({
   // URL publique du front (sert à construire les liens dans les courriels)
   APP_WEB_BASE_URL: Joi.string().uri().default('http://localhost:3001'),
 
+  // Délai de validation d'une résolution avant clôture automatique T17
+  // (CDC §4.6 [EXG-04-031]). 7 jours par défaut.
+  RESOLUTION_VALIDATION_EXPIRY_DAYS: Joi.number().integer().min(1).default(7),
+
   // URL publique de l'API (sert à construire les liens de téléchargement signés)
   API_PUBLIC_BASE_URL: Joi.string().uri().default('http://localhost:3000'),
 

@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsIn,
   IsOptional,
@@ -6,9 +7,11 @@ import {
   IsUUID,
   Length,
   MaxLength,
+  ValidateNested,
 } from 'class-validator';
 import { IMPACT_VALUES, URGENCY_VALUES } from '../../database/entities';
 import type { ImpactValue, UrgencyValue } from '../../database/entities';
+import { CreateBugDetailDto } from './bug-detail.dto';
 
 /**
  * Payload de création d'une demande par un Client (CDC §3.4, §5.2).
@@ -67,4 +70,15 @@ export class CreateRequestDto {
   @IsString()
   @MaxLength(500)
   clientContextNote?: string;
+
+  @ApiProperty({
+    required: false,
+    type: CreateBugDetailDto,
+    description:
+      'Détails structurés du bug — obligatoire si la catégorie porte requires_bug_details (CDC §6.2.1)',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateBugDetailDto)
+  bugDetails?: CreateBugDetailDto;
 }

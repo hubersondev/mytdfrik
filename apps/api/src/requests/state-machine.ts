@@ -24,6 +24,7 @@ export type TransitionCode =
   | 'T11'
   | 'T12'
   | 'T16'
+  | 'T17'
   | 'T18'
   | 'T19'
   | 'CLIENT_REPLY';
@@ -157,6 +158,15 @@ export const TRANSITIONS: Record<TransitionCode, TransitionDef> = {
     requiresNote: false,
     event: 'DEMANDE_CLOTUREE',
     label: 'Valider la résolution',
+  },
+  T17: {
+    code: 'T17',
+    from: ['RESOLUE'],
+    to: 'CLOTUREE',
+    actor: { kind: 'SYSTEM' },
+    requiresNote: false,
+    event: 'DEMANDE_CLOTUREE_AUTO',
+    label: 'Clôture automatique (sans validation explicite)',
   },
   T18: {
     code: 'T18',

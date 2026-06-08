@@ -18,6 +18,7 @@ import {
 } from '../database/entities';
 import type { RequestStatus, RoleScope } from '../database/entities';
 import { MailService } from '../mail/mail.service';
+import { BugDetailsService } from './bug-details.service';
 import type { CreateRequestDto } from './dto/create-request.dto';
 import type { SortKey } from './dto/list-requests.dto';
 import { computeSystemPriority } from './priority-matrix';
@@ -51,6 +52,7 @@ export class RequestsService {
     private readonly dataSource: DataSource,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly bugDetails: BugDetailsService,
   ) {}
 
   // -------------------- Création --------------------
@@ -79,6 +81,14 @@ export class RequestsService {
       throw new BadRequestException({
         code: 'CATEGORY_INACTIVE',
         message: "Cette catégorie n'accepte plus de nouvelles demandes.",
+      });
+    }
+
+    // Une catégorie « bug » exige le formulaire structuré (CDC §6.2.1).
+    if (category.requiresBugDetails && !dto.bugDetails) {
+      throw new BadRequestException({
+        code: 'BUG_DETAILS_REQUIRED',
+        message: 'Cette catégorie requiert les détails structurés du bug.',
       });
     }
 
@@ -113,7 +123,18 @@ export class RequestsService {
       entity.systemPriorityId = systemPriority;
       entity.effectivePriorityId = systemPriority;
       entity.status = 'NOUVELLE';
-      return repo.save(entity);
+      const saved = await repo.save(entity);
+
+      // Détails structurés du bug, dans la même transaction (CDC §6.2.1).
+      if (category.requiresBugDetails && dto.bugDetails) {
+        await this.bugDetails.createInTransaction(
+          manager,
+          saved.id,
+          dto.impact,
+          dto.bugDetails,
+        );
+      }
+      return saved;
     });
 
     // Envoi best-effort de l'accusé de réception (CDC §7.6, annexe A4).
