@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -278,6 +283,36 @@ export class AuthService {
       { userId: tokenRecord.userId, revokedAt: undefined },
       { revokedAt: new Date() },
     );
+  }
+
+  // -------------------------- Changement de mot de passe (authentifié) --------------------------
+
+  /**
+   * Change le mot de passe de l'utilisateur connecté après vérification du mot
+   * de passe actuel (CDC §10.2.1). La session courante reste valide.
+   */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException({ code: 'USER_NOT_FOUND' });
+    }
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) {
+      throw new BadRequestException({
+        code: 'INVALID_CURRENT_PASSWORD',
+        message: 'Le mot de passe actuel est incorrect.',
+      });
+    }
+    const cost = this.config.get<number>('BCRYPT_COST', 12);
+    const passwordHash = await bcrypt.hash(newPassword, cost);
+    await this.users.update(userId, {
+      passwordHash,
+      lastPasswordChangedAt: new Date(),
+    });
   }
 
   // -------------------------- Activation --------------------------

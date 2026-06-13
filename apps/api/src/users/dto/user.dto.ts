@@ -64,3 +64,28 @@ export class CreateUserDto {
 }
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {}
+
+/** Mise à jour par l'utilisateur de son propre profil (champs non sensibles). */
+export class UpdateProfileDto {
+  @ApiProperty({ minLength: 1, maxLength: 120 })
+  @IsString()
+  @Length(1, 120)
+  firstName!: string;
+
+  @ApiProperty({ minLength: 1, maxLength: 120 })
+  @IsString()
+  @Length(1, 120)
+  lastName!: string;
+
+  @ApiProperty({ required: false, maxLength: 40 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  phone?: string;
+
+  @ApiProperty({ required: false, maxLength: 64 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  timeZone?: string;
+}
