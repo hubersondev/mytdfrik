@@ -1,6 +1,7 @@
 'use client';
 
-import { Bell, Check, Loader2 } from 'lucide-react';
+import { Bell, Check, Loader2, SlidersHorizontal } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
@@ -60,10 +61,19 @@ export function NotificationsFeed({
             Non lues
           </FilterButton>
         </div>
-        <Button variant="ghost" size="sm" onClick={markAll} disabled={pending}>
-          <Check className="h-4 w-4" />
-          Tout marquer comme lu
-        </Button>
+        <div className="flex items-center gap-1">
+          <Link
+            href={`/${portal}/notifications/preferences`}
+            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Préférences
+          </Link>
+          <Button variant="ghost" size="sm" onClick={markAll} disabled={pending}>
+            <Check className="h-4 w-4" />
+            Tout marquer comme lu
+          </Button>
+        </div>
       </div>
       <Separator />
 

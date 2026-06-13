@@ -28,6 +28,17 @@ export const PREFERENCE_CATEGORIES = [
 
 export type PreferenceMap = Record<string, { IN_APP?: boolean; EMAIL?: boolean }>;
 
+/** Catégories pertinentes selon le portail (CDC §7.6). */
+export function preferenceCategoriesFor(
+  portal: 'admin' | 'client',
+): Array<{ key: string; label: string }> {
+  const keys = portal === 'client' ? ['CLIENT_ACTIVITY'] : ['ASSIGNMENTS', 'QUEUE', 'ADMIN'];
+  return PREFERENCE_CATEGORIES.filter((c) => keys.includes(c.key)).map((c) => ({
+    key: c.key,
+    label: c.label,
+  }));
+}
+
 /**
  * Origine WebSocket de l'API (sans le préfixe /api/v1). Lue depuis
  * NEXT_PUBLIC_API_URL (disponible côté navigateur).
