@@ -6,8 +6,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, IsNull, Repository } from 'typeorm';
+import { NOTIFY_EVENT } from '../notifications/notification-events';
 import { decodeCursor, encodeCursor } from '../common/cursor.util';
 import type { CursorPage } from '../common/dto/pagination.dto';
 import {
@@ -53,6 +55,7 @@ export class RequestsService {
     private readonly mail: MailService,
     private readonly config: ConfigService,
     private readonly bugDetails: BugDetailsService,
+    private readonly events: EventEmitter2,
   ) {}
 
   // -------------------- Création --------------------
@@ -135,6 +138,13 @@ export class RequestsService {
         );
       }
       return saved;
+    });
+
+    // Notifie les Gestionnaires de la nouvelle demande (CDC §7).
+    this.events.emit(NOTIFY_EVENT, {
+      eventCode: 'DEMANDE_CREEE',
+      requestId: created.id,
+      actorUserId: viewer.id,
     });
 
     // Envoi best-effort de l'accusé de réception (CDC §7.6, annexe A4).
