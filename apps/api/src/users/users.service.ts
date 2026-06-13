@@ -17,7 +17,11 @@ import {
   User,
 } from '../database/entities';
 import { RbacService } from '../rbac/rbac.service';
-import type { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import type {
+  CreateUserDto,
+  UpdateProfileDto,
+  UpdateUserDto,
+} from './dto/user.dto';
 
 export interface UserPublicView {
   id: string;
@@ -173,6 +177,21 @@ export class UsersService {
     });
 
     return { user: this.toPublicView(saved), activationToken: token };
+  }
+
+  /** Mise à jour par l'utilisateur de son propre profil (champs non sensibles). */
+  async updateProfile(
+    id: string,
+    dto: UpdateProfileDto,
+  ): Promise<UserPublicView> {
+    const u = await this.users.findOne({ where: { id, deletedAt: IsNull() } });
+    if (!u) throw new NotFoundException({ code: 'USER_NOT_FOUND' });
+    u.firstName = dto.firstName;
+    u.lastName = dto.lastName;
+    if (dto.phone !== undefined) u.phone = dto.phone.trim() || null;
+    if (dto.timeZone !== undefined) u.timeZone = dto.timeZone;
+    const saved = await this.users.save(u);
+    return this.toPublicView(saved);
   }
 
   async update(id: string, dto: UpdateUserDto): Promise<UserPublicView> {

@@ -1,6 +1,7 @@
 'use client';
 
-import { LogOut, Search } from 'lucide-react';
+import { LogOut, Search, UserCircle } from 'lucide-react';
+import Link from 'next/link';
 import { useTransition } from 'react';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { Avatar, AvatarFallback, initials } from '@/components/ui/avatar';
@@ -73,6 +74,13 @@ export function TopBar({ user, theme, wsToken, initialUnread }: TopBarProps) {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Connecté en tant que</DropdownMenuLabel>
             <div className="px-2 pb-2 text-xs text-zinc-600 dark:text-zinc-400">{user.email}</div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/admin/profile">
+                <UserCircle className="h-4 w-4" />
+                Mon profil
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               disabled={loggingOut}

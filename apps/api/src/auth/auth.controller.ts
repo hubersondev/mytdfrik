@@ -17,6 +17,7 @@ import type { AuthenticatedUser } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { ActivateDto } from './dto/activate.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import {
   PasswordResetConfirmDto,
@@ -94,6 +95,24 @@ export class AuthController {
   })
   async logoutAll(@CurrentUser() user: AuthenticatedUser): Promise<void> {
     await this.auth.logoutAll(user.id);
+  }
+
+  @Post('change-password')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary:
+      'Change le mot de passe de l’utilisateur connecté (mot de passe actuel requis)',
+  })
+  async changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<void> {
+    await this.auth.changePassword(
+      user.id,
+      dto.currentPassword,
+      dto.newPassword,
+    );
   }
 
   @Public()

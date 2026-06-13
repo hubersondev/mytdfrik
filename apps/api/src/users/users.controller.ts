@@ -18,7 +18,7 @@ import { RequirePermissions } from '../auth/decorators/require-permissions.decor
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { CursorPaginationDto } from '../common/dto/pagination.dto';
 import { MailService } from '../mail/mail.service';
-import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import { CreateUserDto, UpdateProfileDto, UpdateUserDto } from './dto/user.dto';
 import { UsersService } from './users.service';
 
 @ApiTags('users')
@@ -43,6 +43,17 @@ export class UsersController {
   @ApiOperation({ summary: "Profil de l'utilisateur courant" })
   me(@CurrentUser() user: AuthenticatedUser) {
     return this.service.findById(user.id);
+  }
+
+  @Patch('me')
+  @ApiOperation({
+    summary: 'Met à jour son propre profil (champs non sensibles)',
+  })
+  updateMe(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.service.updateProfile(user.id, dto);
   }
 
   @Get()
