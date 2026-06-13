@@ -5,8 +5,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, IsNull, Repository } from 'typeorm';
+import {
+  isNotificationEvent,
+  NOTIFY_EVENT,
+} from '../notifications/notification-events';
 import {
   PriorityLevel,
   Request,
@@ -66,6 +71,7 @@ export class TransitionsService {
     @InjectRepository(PriorityLevel)
     private readonly priorities: Repository<PriorityLevel>,
     private readonly dataSource: DataSource,
+    private readonly events: EventEmitter2,
   ) {}
 
   /** Historique des transitions d'une demande (ordre chronologique). */
@@ -112,7 +118,7 @@ export class TransitionsService {
     }
     const def = TRANSITIONS[code];
 
-    return this.dataSource.transaction(async (manager) => {
+    const updated = await this.dataSource.transaction(async (manager) => {
       const repo = manager.getRepository(Request);
       const req = await repo.findOne({
         where: { id: requestId, deletedAt: IsNull() },
@@ -198,9 +204,20 @@ export class TransitionsService {
         event: def.event,
       });
 
-      // TODO S8 : émettre def.event vers le module de notifications (WebSocket + e-mail).
       return req;
     });
+
+    // Notifications (CDC §7) — émises après le commit, hors transaction et
+    // non bloquantes. L'acteur est exclu des destinataires côté service.
+    if (isNotificationEvent(def.event)) {
+      this.events.emit(NOTIFY_EVENT, {
+        eventCode: def.event,
+        requestId: updated.id,
+        actorUserId: def.actor.kind === 'SYSTEM' ? null : viewer.id,
+        actionSummary: dto.note?.trim() || undefined,
+      });
+    }
+    return updated;
   }
 
   // -------------------- Effets par transition --------------------

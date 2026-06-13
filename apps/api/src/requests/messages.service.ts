@@ -4,9 +4,11 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { Request, RequestMessage } from '../database/entities';
+import { NOTIFY_EVENT } from '../notifications/notification-events';
 import type { CreateMessageDto, WithdrawMessageDto } from './dto/message.dto';
 import {
   TransitionsService,
@@ -44,6 +46,7 @@ export class MessagesService {
     @InjectRepository(RequestMessage)
     private readonly messages: Repository<RequestMessage>,
     private readonly transitions: TransitionsService,
+    private readonly events: EventEmitter2,
   ) {}
 
   async list(
@@ -115,6 +118,25 @@ export class MessagesService {
           `Reprise CLIENT_REPLY non appliquée pour ${req.id}: ${(error as Error).message}`,
         );
       }
+    }
+
+    // Notifications de messagerie (CDC §7). La reprise CLIENT_REPLY est notifiée
+    // par le moteur de transitions ; ici on couvre les messages internes et les
+    // messages publics adressés au Client par un interne.
+    if (wantsInternal) {
+      this.events.emit(NOTIFY_EVENT, {
+        eventCode: 'NOUVEAU_MESSAGE_INTERNE',
+        requestId: req.id,
+        actorUserId: viewer.id,
+        actionSummary: dto.body.trim().slice(0, 280),
+      });
+    } else if (isInternalUser) {
+      this.events.emit(NOTIFY_EVENT, {
+        eventCode: 'NOUVEAU_MESSAGE_CLIENT',
+        requestId: req.id,
+        actorUserId: viewer.id,
+        actionSummary: dto.body.trim().slice(0, 280),
+      });
     }
 
     const full = await this.messages.findOne({

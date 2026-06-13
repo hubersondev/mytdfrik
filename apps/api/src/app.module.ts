@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -12,6 +13,7 @@ import { DatabaseModule } from './database/database.module';
 import { GeoModule } from './geo/geo.module';
 import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { RbacModule } from './rbac/rbac.module';
 import { RequestsModule } from './requests/requests.module';
 import { UsersModule } from './users/users.module';
@@ -56,6 +58,8 @@ import { UsersModule } from './users/users.module';
     ]),
     // Jobs planifiés (clôture automatique T17 — CDC §4.6).
     ScheduleModule.forRoot(),
+    // Broker d'événements in-process pour les notifications (CDC §7 [EXG-07-004]).
+    EventEmitterModule.forRoot(),
     DatabaseModule,
     MailModule,
     RbacModule,
@@ -65,6 +69,7 @@ import { UsersModule } from './users/users.module';
     CatalogModule,
     GeoModule,
     RequestsModule,
+    NotificationsModule,
     HealthModule,
   ],
   providers: [

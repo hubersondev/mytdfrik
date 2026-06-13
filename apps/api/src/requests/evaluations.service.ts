@@ -4,9 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { Evaluation, Request } from '../database/entities';
+import { NOTIFY_EVENT } from '../notifications/notification-events';
 import type { SubmitEvaluationDto } from './dto/evaluation.dto';
 import type { TransitionViewer } from './transitions.service';
 
@@ -20,6 +22,7 @@ export class EvaluationsService {
     @InjectRepository(Evaluation)
     private readonly evaluations: Repository<Evaluation>,
     @InjectRepository(Request) private readonly requests: Repository<Request>,
+    private readonly events: EventEmitter2,
   ) {}
 
   async get(
@@ -56,7 +59,7 @@ export class EvaluationsService {
         message: 'Cette demande a déjà été évaluée.',
       });
     }
-    return this.evaluations.save(
+    const saved = await this.evaluations.save(
       this.evaluations.create({
         requestId,
         score: dto.score,
@@ -64,6 +67,17 @@ export class EvaluationsService {
         submittedByUserId: viewer.id,
       }),
     );
+
+    // Évaluation basse → alerte des Gestionnaires (CDC §7, EVALUATION_BASSE).
+    if (dto.score <= 2) {
+      this.events.emit(NOTIFY_EVENT, {
+        eventCode: 'EVALUATION_BASSE',
+        requestId,
+        actorUserId: viewer.id,
+        actionSummary: `Note ${dto.score}/5${dto.comment ? ` — ${dto.comment.trim().slice(0, 200)}` : ''}`,
+      });
+    }
+    return saved;
   }
 
   private async loadReadable(

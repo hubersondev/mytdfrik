@@ -4,6 +4,13 @@ export { Category } from './category.entity';
 export { City } from './city.entity';
 export { Country } from './country.entity';
 export { Evaluation } from './evaluation.entity';
+export { Notification } from './notification.entity';
+export type { NotificationPayload } from './notification.entity';
+export { NotificationDelivery } from './notification-delivery.entity';
+export type {
+  DeliveryChannel,
+  DeliveryStatus,
+} from './notification-delivery.entity';
 export { Organization } from './organization.entity';
 export { PasswordResetToken } from './password-reset-token.entity';
 export { PriorityLevel, PRIORITY_LEVEL_CODES } from './priority-level.entity';

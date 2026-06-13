@@ -19,6 +19,21 @@ export const TEMPLATE_CODES = [
   'ACCUSE_RECEPTION',
   'COMPTE_CREE_ACTIVATION',
   'MOT_DE_PASSE_REINITIALISATION_LIEN',
+  // --- Sprint 8 : cycle de vie des demandes (annexe A4) ---
+  'DEMANDE_QUALIFIEE',
+  'COMPLEMENT_DEMANDE',
+  'DEMANDE_REJETEE',
+  'DEMANDE_AFFECTEE_CLIENT',
+  'DEMANDE_AFFECTEE_RESPONSABLE',
+  'TRAITEMENT_DEMARRE',
+  'NOUVEAU_MESSAGE',
+  'RESOLUTION_PROPOSEE',
+  'DEMANDE_CLOTUREE',
+  'DEMANDE_CLOTUREE_AUTO',
+  'DEMANDE_REOUVERTE',
+  'EVALUATION_BASSE',
+  'MOT_DE_PASSE_REINITIALISE_CONFIRMATION',
+  'COMPTE_VERROUILLE',
 ] as const;
 export type TemplateCode = (typeof TEMPLATE_CODES)[number];
 
@@ -56,6 +71,46 @@ const wrapHtml = (body: string): string => `
     </footer>
   </body>
 </html>`;
+
+/**
+ * Construit un gabarit standard lié à une demande (CDC §7.5 [EXG-07-021],
+ * sujet [EXG-07-030]). Variables : first_name, public_reference, title,
+ * status_label, request_url, actor_name, action_summary.
+ */
+function requestEmail(
+  action: string,
+  intro: string,
+  ctaLabel = 'Voir ma demande',
+): TemplateDefinition {
+  return {
+    subject: `[MyTDFRIK] [{{public_reference}}] ${action} — {{title}}`,
+    text: `Bonjour {{first_name}},
+
+${intro}
+
+Demande : {{public_reference}} « {{title}} »
+Statut : {{status_label}}
+{{action_summary}}
+
+Accéder à la demande : {{request_url}}
+${COMMON_FOOTER_TEXT}
+
+L'équipe TECHDIFRIK.`,
+    html: wrapHtml(`
+      <p>Bonjour <strong>{{first_name}}</strong>,</p>
+      <p>${intro}</p>
+      <p style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px 16px;">
+        <strong>{{public_reference}}</strong> · « {{title}} »<br />
+        Statut : <strong>{{status_label}}</strong>
+      </p>
+      <p>{{action_summary}}</p>
+      <p style="margin-top: 24px;">
+        <a href="{{request_url}}" style="display: inline-block; background-color: #0d6e2a; color: #ffffff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: 600;">${ctaLabel}</a>
+      </p>
+      <p style="color: #6b7280;">L'équipe TECHDIFRIK.</p>
+    `),
+  };
+}
 
 const TEMPLATES: Record<TemplateCode, TemplateDefinition> = {
   ACCUSE_RECEPTION: {
@@ -126,6 +181,99 @@ L'équipe TECHDIFRIK.`,
         <a href="{{reset_url}}" style="display: inline-block; background-color: #0d6e2a; color: #ffffff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: 600;">Réinitialiser mon mot de passe</a>
       </p>
       <p style="color: #6b7280;">Si vous n'êtes pas à l'origine de cette demande, ignorez ce courriel et signalez l'incident à votre administrateur.</p>
+      <p style="color: #6b7280;">L'équipe TECHDIFRIK.</p>
+    `),
+  },
+
+  // ---------- Sprint 8 : cycle de vie des demandes (annexe A4) ----------
+  DEMANDE_QUALIFIEE: requestEmail(
+    'Demande qualifiée',
+    'Votre demande a été qualifiée par nos équipes et va être prise en charge.',
+  ),
+  COMPLEMENT_DEMANDE: requestEmail(
+    'Complément demandé',
+    'Nos équipes ont besoin d’une précision pour avancer sur votre demande. Merci de répondre depuis la messagerie de la demande.',
+    'Répondre',
+  ),
+  DEMANDE_REJETEE: requestEmail(
+    'Demande rejetée',
+    'Après examen, votre demande n’a pas pu être retenue. Le motif est précisé ci-dessous.',
+  ),
+  DEMANDE_AFFECTEE_CLIENT: requestEmail(
+    'Demande affectée',
+    'Votre demande a été affectée à un responsable du traitement.',
+  ),
+  DEMANDE_AFFECTEE_RESPONSABLE: requestEmail(
+    'Demande qui vous est affectée',
+    'Une demande vient de vous être affectée. Merci de la prendre en charge.',
+    'Traiter la demande',
+  ),
+  TRAITEMENT_DEMARRE: requestEmail(
+    'Traitement démarré',
+    'Le traitement de votre demande a démarré.',
+  ),
+  NOUVEAU_MESSAGE: requestEmail(
+    'Nouveau message',
+    'Un nouveau message a été publié sur votre demande.',
+    'Lire le message',
+  ),
+  RESOLUTION_PROPOSEE: requestEmail(
+    'Résolution proposée',
+    'Une résolution vous est proposée. Merci de la valider ou de la refuser depuis votre espace.',
+    'Valider la résolution',
+  ),
+  DEMANDE_CLOTUREE: requestEmail(
+    'Demande clôturée',
+    'Votre demande est désormais clôturée. Vous pouvez évaluer sa prise en charge depuis votre espace.',
+    'Évaluer la prise en charge',
+  ),
+  DEMANDE_CLOTUREE_AUTO: requestEmail(
+    'Demande clôturée automatiquement',
+    'Faute de validation dans le délai imparti, votre demande a été clôturée automatiquement. Vous pouvez la rouvrir sous 30 jours si nécessaire.',
+  ),
+  DEMANDE_REOUVERTE: requestEmail(
+    'Demande rouverte',
+    'Le client a rouvert une demande clôturée. Elle est de nouveau dans la file de traitement.',
+    'Traiter la demande',
+  ),
+  EVALUATION_BASSE: requestEmail(
+    'Évaluation basse',
+    'Une demande clôturée a reçu une évaluation basse (≤ 2). Un suivi qualité peut être pertinent.',
+    'Voir la demande',
+  ),
+
+  // ---------- Sprint 8 : sécurité du compte ----------
+  MOT_DE_PASSE_REINITIALISE_CONFIRMATION: {
+    subject: '[MyTDFRIK] Votre mot de passe a été réinitialisé',
+    text: `Bonjour {{first_name}},
+
+Votre mot de passe MyTDFRIK vient d'être réinitialisé avec succès.
+
+Si vous n'êtes pas à l'origine de cette action, contactez immédiatement votre administrateur.
+${COMMON_FOOTER_TEXT}
+
+L'équipe TECHDIFRIK.`,
+    html: wrapHtml(`
+      <p>Bonjour <strong>{{first_name}}</strong>,</p>
+      <p>Votre mot de passe MyTDFRIK vient d'être réinitialisé avec succès.</p>
+      <p style="color: #6b7280;">Si vous n'êtes pas à l'origine de cette action, contactez immédiatement votre administrateur.</p>
+      <p style="color: #6b7280;">L'équipe TECHDIFRIK.</p>
+    `),
+  },
+  COMPTE_VERROUILLE: {
+    subject: '[MyTDFRIK] Votre compte a été temporairement verrouillé',
+    text: `Bonjour {{first_name}},
+
+Suite à plusieurs tentatives de connexion infructueuses, votre compte a été temporairement verrouillé par sécurité. Il sera de nouveau accessible automatiquement après le délai de verrouillage.
+
+Si vous n'êtes pas à l'origine de ces tentatives, signalez-le à votre administrateur.
+${COMMON_FOOTER_TEXT}
+
+L'équipe TECHDIFRIK.`,
+    html: wrapHtml(`
+      <p>Bonjour <strong>{{first_name}}</strong>,</p>
+      <p>Suite à plusieurs tentatives de connexion infructueuses, votre compte a été <strong>temporairement verrouillé</strong> par sécurité. Il sera de nouveau accessible automatiquement après le délai de verrouillage.</p>
+      <p style="color: #6b7280;">Si vous n'êtes pas à l'origine de ces tentatives, signalez-le à votre administrateur.</p>
       <p style="color: #6b7280;">L'équipe TECHDIFRIK.</p>
     `),
   },
