@@ -6,8 +6,11 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { AttachmentPanel } from '@/components/attachment-panel/attachment-panel';
 import { MessageThread } from '@/components/message-thread/message-thread';
+import { BugDetailsCard } from '@/components/request/bug-details-card';
+import { BugDiagnosticPanel } from '@/components/request/bug-diagnostic-panel';
 import { apiFetch, apiFetchOr, type ApiError } from '@/lib/api';
 import type { AttachmentView } from '@/lib/attachments';
+import type { BugDetailView } from '@/lib/bug';
 import { getSession } from '@/lib/auth';
 import type { MessageView } from '@/lib/messages';
 import { fetchRoleOptions } from '@/lib/role-options';
@@ -20,7 +23,8 @@ import {
   type RequestDetail,
 } from '@/lib/requests';
 import type { CursorPage, UserRow } from '@/lib/users';
-import { TransitionPanel } from '../_components/transition-panel';
+import { TransitionPanel } from '@/components/request/transition-panel';
+import { applyTransitionAction } from '../actions';
 
 interface HistoryEntry {
   id: string;
@@ -64,6 +68,9 @@ export default async function AdminRequestDetailPage({
     apiFetchOr<AttachmentView[]>(`/requests/${request.id}/attachments`, []),
     getSession(),
   ]);
+
+  const bug = await apiFetchOr<BugDetailView | null>(`/requests/${request.id}/bug-details`, null);
+  const canDiagnose = bug !== null && ['AFFECTEE', 'EN_COURS'].includes(request.status);
 
   // Responsables affectables = utilisateurs actifs dont le rôle est interne.
   const internalRoleIds = new Set(roles.filter((r) => r.scope === 'INTERNAL').map((r) => r.id));
@@ -178,6 +185,8 @@ export default async function AdminRequestDetailPage({
             </ol>
           </Card>
 
+          {bug && <BugDetailsCard bug={bug} />}
+
           <AttachmentPanel
             requestId={request.id}
             revalidatePath={`/admin/requests/${request.publicReference}`}
@@ -201,9 +210,18 @@ export default async function AdminRequestDetailPage({
             requestId={request.id}
             currentStatus={request.status}
             codes={codes}
+            action={applyTransitionAction}
             assignees={assignees}
             systemPriority={request.systemPriorityId}
           />
+
+          {canDiagnose && bug && (
+            <BugDiagnosticPanel
+              reference={request.publicReference}
+              requestId={request.id}
+              bug={bug}
+            />
+          )}
 
           <SlaCard request={request} />
 

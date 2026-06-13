@@ -36,6 +36,21 @@ export async function submitRequestAction(
     return { ok: false, fieldErrors };
   }
 
+  // Normalise les détails du bug : occurredAt → ISO complet, champs optionnels
+  // vides → undefined. Absent pour une demande non-bug.
+  const bug = parsed.data.bugDetails;
+  const bugPayload = bug
+    ? {
+        ...bug,
+        occurredAt: new Date(bug.occurredAt).toISOString(),
+        environmentOs: bug.environmentOs?.trim() || undefined,
+        environmentBrowser: bug.environmentBrowser?.trim() || undefined,
+        environmentHardware: bug.environmentHardware?.trim() || undefined,
+        errorMessages: bug.errorMessages?.trim() || undefined,
+        frequencyLabel: bug.isRecurrent ? bug.frequencyLabel : undefined,
+      }
+    : undefined;
+
   let created: RequestDetail;
   try {
     created = await apiFetch<RequestDetail>('/requests', {
@@ -43,6 +58,7 @@ export async function submitRequestAction(
       body: JSON.stringify({
         ...parsed.data,
         clientContextNote: parsed.data.clientContextNote?.trim() || undefined,
+        bugDetails: bugPayload,
       }),
     });
   } catch (error) {
@@ -57,6 +73,14 @@ export async function submitRequestAction(
       return {
         ok: false,
         fieldErrors: { categoryId: 'Catégorie introuvable.' },
+      };
+    }
+    if (apiError?.code === 'BLOCKING_BUG_IMPACT_MISMATCH') {
+      return {
+        ok: false,
+        fieldErrors: {
+          impact: 'Un bug bloquant impose un impact « Blocage total » ou « partiel ».',
+        },
       };
     }
     return {
