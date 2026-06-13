@@ -24,7 +24,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   ]);
 
   return (
-    <div className="flex min-h-screen bg-sand-50 dark:bg-zinc-950">
+    <div className="flex min-h-screen bg-transparent">
       <Sidebar collapsed={sidebarCollapsed} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar

@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Pagination } from '@/components/ui/pagination';
+import { paginate, resolvePageSize } from '@/lib/paginate';
 import { apiFetchOr } from '@/lib/api';
 import {
   applyClientSideView,
@@ -27,6 +29,8 @@ export default async function AdminCitiesPage({
     status?: string;
     sort?: string;
     q?: string;
+    page?: string;
+    size?: string;
     created?: string;
     updated?: string;
   }>;
@@ -36,6 +40,7 @@ export default async function AdminCitiesPage({
   const status = statusKeyFromQuery(params.status);
   const sort = sortKeyFromQuery(params.sort);
   const query = params.q ?? '';
+  const PAGE_SIZE = resolvePageSize(params.size);
 
   // Le filtre pays est délégué à l'API ; statut + recherche + tri sont appliqués
   // en mémoire (jeu de données borné à 100, cohérent avec le reste de l'admin).
@@ -53,6 +58,7 @@ export default async function AdminCitiesPage({
     sort,
     extraHaystack: (c) => c.country?.name ?? '',
   });
+  const { pageItems, safePage } = paginate(rows, Number(params.page) || 1, PAGE_SIZE);
   const activeCount = citiesPage.items.filter((c) => c.isActive).length;
 
   return (
@@ -64,7 +70,7 @@ export default async function AdminCitiesPage({
             Configuration
           </div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               Villes
             </h1>
             <Badge variant="secondary">{citiesPage.items.length}</Badge>
@@ -106,7 +112,7 @@ export default async function AdminCitiesPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
-              {rows.map((c) => (
+              {pageItems.map((c) => (
                 <tr
                   key={c.id}
                   className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
@@ -151,6 +157,7 @@ export default async function AdminCitiesPage({
             </tbody>
           </table>
         </div>
+        <Pagination page={safePage} pageSize={PAGE_SIZE} total={rows.length} />
       </Card>
     </div>
   );

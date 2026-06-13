@@ -4,29 +4,30 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 disabled:pointer-events-none disabled:opacity-50 dark:focus-visible:ring-offset-zinc-950',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97]',
   {
     variants: {
       variant: {
-        /** CTA principal — vert leaf TECHDIFRIK (couleur primary de l'identité). */
+        /** CTA principal — dégradé vert leaf TECHDIFRIK (couleur primary de l'identité). */
         default:
-          'bg-leaf-700 text-white hover:bg-leaf-800 focus-visible:ring-leaf-700 dark:bg-leaf-600 dark:hover:bg-leaf-500',
+          'bg-gradient-to-b from-leaf-600 to-leaf-700 text-white shadow-sm hover:from-leaf-500 hover:to-leaf-600 hover:shadow-md focus-visible:ring-leaf-600 dark:from-leaf-600 dark:to-leaf-700 dark:hover:from-leaf-500 dark:hover:to-leaf-600',
         /** CTA secondaire identitaire — orange brand. Réservé aux highlights marketing. */
         brand:
-          'bg-brand-500 text-white hover:bg-brand-600 focus-visible:ring-brand-500 dark:hover:bg-brand-400',
+          'bg-gradient-to-b from-brand-400 to-brand-500 text-white shadow-sm hover:from-brand-500 hover:to-brand-600 hover:shadow-md focus-visible:ring-brand-500',
         /** Action neutre forte — pour les boutons "valider" ou actions non identitaires. */
         neutral:
-          'bg-zinc-900 text-zinc-50 hover:bg-zinc-800 focus-visible:ring-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:focus-visible:ring-zinc-100',
+          'bg-zinc-900 text-zinc-50 shadow-sm hover:bg-zinc-800 hover:shadow-md focus-visible:ring-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 dark:focus-visible:ring-zinc-100',
         outline:
-          'border border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50 focus-visible:ring-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900 dark:focus-visible:ring-zinc-700',
+          'border border-zinc-200 bg-white/80 text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 focus-visible:ring-zinc-300 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-100 dark:hover:bg-zinc-900 dark:focus-visible:ring-zinc-700',
         ghost:
           'text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:ring-zinc-300 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 dark:focus-visible:ring-zinc-700',
-        destructive: 'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-500',
+        destructive:
+          'bg-gradient-to-b from-rose-500 to-rose-600 text-white shadow-sm hover:from-rose-600 hover:to-rose-700 hover:shadow-md focus-visible:ring-rose-500',
       },
       size: {
         default: 'h-10 px-4 py-2',
-        sm: 'h-8 rounded-md px-3 text-xs',
-        lg: 'h-11 rounded-md px-8',
+        sm: 'h-8 rounded-lg px-3 text-xs',
+        lg: 'h-11 rounded-lg px-8',
       },
     },
     defaultVariants: { variant: 'default', size: 'default' },

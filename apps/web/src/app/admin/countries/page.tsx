@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Pagination } from '@/components/ui/pagination';
+import { paginate, resolvePageSize } from '@/lib/paginate';
 import { apiFetchOr } from '@/lib/api';
 import {
   applyClientSideView,
@@ -25,6 +27,8 @@ export default async function AdminCountriesPage({
     status?: string;
     sort?: string;
     q?: string;
+    page?: string;
+    size?: string;
     created?: string;
     updated?: string;
   }>;
@@ -33,6 +37,7 @@ export default async function AdminCountriesPage({
   const status = statusKeyFromQuery(params.status);
   const sort = sortKeyFromQuery(params.sort);
   const query = params.q ?? '';
+  const PAGE_SIZE = resolvePageSize(params.size);
 
   const page = await apiFetchOr<CursorPage<CountryRow>>(
     '/countries?limit=100',
@@ -45,6 +50,7 @@ export default async function AdminCountriesPage({
     sort,
     extraHaystack: (c) => c.code,
   });
+  const { pageItems, safePage } = paginate(rows, Number(params.page) || 1, PAGE_SIZE);
   const activeCount = page.items.filter((c) => c.isActive).length;
 
   return (
@@ -56,7 +62,7 @@ export default async function AdminCountriesPage({
             Configuration
           </div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               Pays
             </h1>
             <Badge variant="secondary">{page.items.length}</Badge>
@@ -91,7 +97,7 @@ export default async function AdminCountriesPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
-              {rows.map((c) => (
+              {pageItems.map((c) => (
                 <tr
                   key={c.id}
                   className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
@@ -138,6 +144,7 @@ export default async function AdminCountriesPage({
             </tbody>
           </table>
         </div>
+        <Pagination page={safePage} pageSize={PAGE_SIZE} total={rows.length} />
       </Card>
     </div>
   );

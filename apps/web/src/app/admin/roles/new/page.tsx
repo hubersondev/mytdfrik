@@ -23,7 +23,7 @@ export default async function NewRolePage() {
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-leaf-50 text-leaf-700 dark:bg-leaf-950/60 dark:text-leaf-300">
             <ShieldPlus className="h-5 w-5" />
           </span>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             Nouveau rôle
           </h1>
         </div>
