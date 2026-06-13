@@ -15,6 +15,7 @@ import { HealthModule } from './health/health.module';
 import { MailModule } from './mail/mail.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { RbacModule } from './rbac/rbac.module';
+import { ReportingModule } from './reporting/reporting.module';
 import { RequestsModule } from './requests/requests.module';
 import { UsersModule } from './users/users.module';
 
@@ -70,6 +71,7 @@ import { UsersModule } from './users/users.module';
     GeoModule,
     RequestsModule,
     NotificationsModule,
+    ReportingModule,
     HealthModule,
   ],
   providers: [
