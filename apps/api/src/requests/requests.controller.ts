@@ -31,11 +31,15 @@ import {
   AttachmentsService,
   type UploadedFileLike,
 } from './attachments.service';
+import { BugDetailsService } from './bug-details.service';
+import { EvaluationsService } from './evaluations.service';
 import { ApplyTransitionDto } from './dto/apply-transition.dto';
 import { DraftsService } from './drafts.service';
 import { WithdrawAttachmentDto } from './dto/attachment.dto';
+import { BugDiagnosticDto } from './dto/bug-detail.dto';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpsertDraftDto } from './dto/draft.dto';
+import { SubmitEvaluationDto } from './dto/evaluation.dto';
 import { ListRequestsQueryDto } from './dto/list-requests.dto';
 import { CreateMessageDto, WithdrawMessageDto } from './dto/message.dto';
 import { MessagesService } from './messages.service';
@@ -60,6 +64,8 @@ export class RequestsController {
     private readonly transitions: TransitionsService,
     private readonly messages: MessagesService,
     private readonly attachments: AttachmentsService,
+    private readonly bugDetails: BugDetailsService,
+    private readonly evaluations: EvaluationsService,
   ) {}
 
   private viewer(user: AuthenticatedUser): TransitionViewer {
@@ -289,6 +295,53 @@ export class RequestsController {
     @Body() dto: WithdrawAttachmentDto,
   ) {
     return this.attachments.withdraw(this.viewer(user), attachmentId, dto);
+  }
+
+  // -------------------- Bugs structurés (CDC §6) --------------------
+
+  @Get(':id/bug-details')
+  @ApiOperation({
+    summary: "Détails structurés d'un bug (null si non applicable)",
+  })
+  getBugDetails(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.bugDetails.get(this.viewer(user), id);
+  }
+
+  @Put(':id/bug-diagnostic')
+  @RequirePermissions('requests.process')
+  @ApiOperation({
+    summary: 'Consigne le diagnostic du Responsable (avant la résolution T11)',
+  })
+  upsertBugDiagnostic(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: BugDiagnosticDto,
+  ) {
+    return this.bugDetails.upsertDiagnostic(this.viewer(user), id, dto);
+  }
+
+  // -------------------- Évaluation de clôture (CDC §8.4.12) --------------------
+
+  @Get(':id/evaluation')
+  @ApiOperation({ summary: 'Évaluation de satisfaction (null si non soumise)' })
+  getEvaluation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.evaluations.get(this.viewer(user), id);
+  }
+
+  @Post(':id/evaluation')
+  @ApiOperation({ summary: 'Soumet une évaluation (Client, demande clôturée)' })
+  submitEvaluation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: SubmitEvaluationDto,
+  ) {
+    return this.evaluations.submit(this.viewer(user), id, dto);
   }
 
   // -------------------- Brouillons (Client uniquement) --------------------

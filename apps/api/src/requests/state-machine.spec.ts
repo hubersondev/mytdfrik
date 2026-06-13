@@ -39,11 +39,18 @@ describe('state-machine — définition', () => {
         'T11',
         'T12',
         'T16',
+        'T17',
         'T18',
         'T19',
         'CLIENT_REPLY',
       ].sort(),
     );
+  });
+
+  it('T17 (clôture auto) est une transition système RESOLUE → CLOTUREE', () => {
+    expect(TRANSITIONS.T17.actor.kind).toBe('SYSTEM');
+    expect(TRANSITIONS.T17.from).toEqual(['RESOLUE']);
+    expect(TRANSITIONS.T17.to).toBe('CLOTUREE');
   });
 
   it('a des statuts source/cible valides', () => {

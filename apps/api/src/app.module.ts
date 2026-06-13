@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
@@ -53,6 +54,8 @@ import { UsersModule } from './users/users.module';
         limit: 60,
       },
     ]),
+    // Jobs planifiés (clôture automatique T17 — CDC §4.6).
+    ScheduleModule.forRoot(),
     DatabaseModule,
     MailModule,
     RbacModule,

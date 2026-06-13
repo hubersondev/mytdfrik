@@ -10,6 +10,7 @@ import { DataSource, IsNull, Repository } from 'typeorm';
 import {
   PriorityLevel,
   Request,
+  RequestBugDetail,
   RequestStateHistory,
   User,
 } from '../database/entities';
@@ -104,6 +105,7 @@ export class TransitionsService {
     requestId: string,
     code: string,
     dto: ApplyTransitionDto,
+    options: { system?: boolean } = {},
   ): Promise<Request> {
     if (!isTransitionCode(code)) {
       throw new NotFoundException({ code: 'UNKNOWN_TRANSITION' });
@@ -138,8 +140,12 @@ export class TransitionsService {
         });
       }
 
-      // Acteur autorisé (CDC §4.7.3 → 403).
-      if (!this.canActorTrigger(viewer, def, req)) {
+      // Acteur autorisé (CDC §4.7.3 → 403). Les transitions SYSTEM (ex. T17,
+      // clôture auto) ne sont déclenchables que via un job interne (options.system).
+      const actorOk = options.system
+        ? def.actor.kind === 'SYSTEM'
+        : this.canActorTrigger(viewer, def, req);
+      if (!actorOk) {
         throw new ForbiddenException({
           code: 'TRANSITION_FORBIDDEN',
           message: 'Votre rôle ne permet pas cette action sur cette demande.',
@@ -256,11 +262,16 @@ export class TransitionsService {
         req.assignedToUserId = null;
         break;
       case 'T11':
+        // Pour un bug structuré, le diagnostic doit être consigné avant la
+        // proposition de résolution (CDC §6.3.2 [EXG-06-040]).
+        await this.assertDiagnosticConsigned(manager, req.id);
         req.resolvedAt = now;
         // Respect SLA résolution (hors attente client) évalué à la proposition.
         req.isSlaResolutionRespected = this.isResolutionSlaRespected(req, now);
         break;
       case 'T16':
+      case 'T17':
+        // Clôture explicite (Client) ou automatique (système après 7 jours).
         req.closedAt = now;
         break;
       case 'T19':
@@ -379,6 +390,26 @@ export class TransitionsService {
     }
     req.assignedToUserId = assignee.id;
     req.assignedByUserId = viewer.id;
+  }
+
+  /**
+   * Vérifie qu'un bug structuré a son diagnostic consigné avant T11
+   * (CDC §6.3.2 [EXG-06-040]). Sans détails bug, la demande n'est pas concernée.
+   */
+  private async assertDiagnosticConsigned(
+    manager: import('typeorm').EntityManager,
+    requestId: string,
+  ): Promise<void> {
+    const detail = await manager.getRepository(RequestBugDetail).findOne({
+      where: { requestId },
+    });
+    if (detail && !detail.isReproduced) {
+      throw new BadRequestException({
+        code: 'DIAGNOSTIC_REQUIRED',
+        message:
+          'Consignez le diagnostic (reproduction, cause, action corrective) avant de proposer une résolution.',
+      });
+    }
   }
 
   private applyReopen(req: Request, now: Date): void {
