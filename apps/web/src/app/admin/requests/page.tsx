@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Badge, priorityVariant } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
+import { StatCard } from '@/components/ui/stat-card';
 import { paginate, resolvePageSize } from '@/lib/paginate';
 import { apiFetchOr } from '@/lib/api';
 import { priorityLabel, statusLabel, statusVariant, type RequestSummary } from '@/lib/requests';
@@ -55,6 +56,8 @@ export default async function AdminRequestsPage({
   });
 
   const newCount = page.items.filter((r) => r.status === 'NOUVELLE').length;
+  const inProgressCount = page.items.filter((r) => r.status === 'EN_COURS').length;
+  const closedCount = page.items.filter((r) => r.status === 'CLOTUREE').length;
   const { pageItems, safePage } = paginate(page.items, Number(params.page) || 1, PAGE_SIZE);
 
   return (
@@ -77,34 +80,40 @@ export default async function AdminRequestsPage({
         </p>
       </header>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
-          <Link
-            href={tabQuery(false)}
-            className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
-              !mine
-                ? 'bg-leaf-700 text-white'
-                : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
-            }`}
-          >
-            Toutes
-          </Link>
-          <Link
-            href={tabQuery(true)}
-            className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
-              mine
-                ? 'bg-leaf-700 text-white'
-                : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
-            }`}
-          >
-            Affectées à moi
-          </Link>
-        </div>
-        <FilterMenu current={bucket} />
-        <SortMenu current={sort} />
-      </div>
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard value={page.items.length} label="Total" />
+        <StatCard value={newCount} label="À qualifier" tone="amber" />
+        <StatCard value={inProgressCount} label="En cours" tone="leaf" />
+        <StatCard value={closedCount} label="Clôturées" tone="zinc" />
+      </section>
 
       <Card className="overflow-hidden">
+        <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200/70 p-4 dark:border-zinc-800">
+          <div className="flex rounded-md border border-zinc-200 p-0.5 dark:border-zinc-800">
+            <Link
+              href={tabQuery(false)}
+              className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                !mine
+                  ? 'bg-leaf-700 text-white'
+                  : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+              }`}
+            >
+              Toutes
+            </Link>
+            <Link
+              href={tabQuery(true)}
+              className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                mine
+                  ? 'bg-leaf-700 text-white'
+                  : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+              }`}
+            >
+              Affectées à moi
+            </Link>
+          </div>
+          <FilterMenu current={bucket} />
+          <SortMenu current={sort} />
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>

@@ -4,6 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
+import { RowActions } from '@/components/ui/row-actions';
+import { StatCard } from '@/components/ui/stat-card';
+import { StatusPill } from '@/components/ui/status-pill';
 import { paginate, resolvePageSize } from '@/lib/paginate';
 import { apiFetchOr } from '@/lib/api';
 import {
@@ -13,7 +16,7 @@ import {
   type CursorPage,
   type OrganizationRow,
 } from '@/lib/organizations';
-import { OrganizationActionsMenu } from './_components/organization-actions-menu';
+import { deleteOrganizationAction } from './actions';
 import { OrganizationsToolbar } from './_components/organizations-toolbar';
 
 function emptyPage<T>(): CursorPage<T> {
@@ -60,6 +63,7 @@ export default async function AdminOrganizationsPage({
 
   const rows = applyClientSideView(page.items, { status, query, sort });
   const { pageItems, safePage } = paginate(rows, Number(params.page) || 1, PAGE_SIZE);
+  const total = page.items.length;
   const activeCount = page.items.filter((o) => o.isActive).length;
 
   return (
@@ -89,6 +93,12 @@ export default async function AdminOrganizationsPage({
         </Button>
       </header>
 
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <StatCard value={total} label="Organisations" />
+        <StatCard value={activeCount} label="Actives" tone="leaf" />
+        <StatCard value={total - activeCount} label="Inactives" tone="zinc" />
+      </section>
+
       {params.created && (
         <SuccessBanner>
           Organisation créée. Vous pouvez désormais y rattacher des comptes Client.
@@ -96,9 +106,10 @@ export default async function AdminOrganizationsPage({
       )}
       {params.updated && <SuccessBanner>Modifications enregistrées.</SuccessBanner>}
 
-      <OrganizationsToolbar status={status} sort={sort} query={query} />
-
       <Card className="overflow-hidden">
+        <div className="border-b border-zinc-200/70 p-4 dark:border-zinc-800">
+          <OrganizationsToolbar status={status} sort={sort} query={query} />
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -156,19 +167,19 @@ export default async function AdminOrganizationsPage({
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {o.isActive ? (
-                      <Badge variant="success">Active</Badge>
-                    ) : (
-                      <Badge variant="secondary">Inactive</Badge>
-                    )}
+                    <StatusPill active={o.isActive} activeLabel="Active" inactiveLabel="Inactive" />
                   </td>
-                  <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                  <td className="px-4 py-3 font-mono text-xs text-zinc-500 dark:text-zinc-400">
                     {formatDate(o.createdAt)}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end">
-                      <OrganizationActionsMenu organizationId={o.id} name={o.name} />
-                    </div>
+                  <td className="px-4 py-3">
+                    <RowActions
+                      editHref={`/admin/organizations/${o.id}/edit`}
+                      label={o.name}
+                      deleteAction={deleteOrganizationAction}
+                      deleteId={o.id}
+                      deleteConfirm={`Supprimer l'organisation « ${o.name} » ?`}
+                    />
                   </td>
                 </tr>
               ))}

@@ -4,6 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
+import { RowActions } from '@/components/ui/row-actions';
+import { StatCard } from '@/components/ui/stat-card';
+import { StatusPill } from '@/components/ui/status-pill';
 import { paginate, resolvePageSize } from '@/lib/paginate';
 import { apiFetchOr } from '@/lib/api';
 import {
@@ -13,7 +16,7 @@ import {
   type CountryRow,
   type CursorPage,
 } from '@/lib/geo';
-import { CountryActionsMenu } from './_components/country-actions-menu';
+import { deleteCountryAction } from './actions';
 import { CountriesToolbar } from './_components/countries-toolbar';
 
 function emptyPage<T>(): CursorPage<T> {
@@ -51,6 +54,7 @@ export default async function AdminCountriesPage({
     extraHaystack: (c) => c.code,
   });
   const { pageItems, safePage } = paginate(rows, Number(params.page) || 1, PAGE_SIZE);
+  const total = page.items.length;
   const activeCount = page.items.filter((c) => c.isActive).length;
 
   return (
@@ -80,12 +84,19 @@ export default async function AdminCountriesPage({
         </Button>
       </header>
 
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <StatCard value={total} label="Pays" />
+        <StatCard value={activeCount} label="Actifs" tone="leaf" />
+        <StatCard value={total - activeCount} label="Inactifs" tone="zinc" />
+      </section>
+
       {params.created && <SuccessBanner>Pays créé.</SuccessBanner>}
       {params.updated && <SuccessBanner>Modifications enregistrées.</SuccessBanner>}
 
-      <CountriesToolbar status={status} sort={sort} query={query} />
-
       <Card className="overflow-hidden">
+        <div className="border-b border-zinc-200/70 p-4 dark:border-zinc-800">
+          <CountriesToolbar status={status} sort={sort} query={query} />
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -116,16 +127,16 @@ export default async function AdminCountriesPage({
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    {c.isActive ? (
-                      <Badge variant="success">Actif</Badge>
-                    ) : (
-                      <Badge variant="secondary">Inactif</Badge>
-                    )}
+                    <StatusPill active={c.isActive} />
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end">
-                      <CountryActionsMenu countryId={c.id} name={c.name} />
-                    </div>
+                  <td className="px-4 py-3">
+                    <RowActions
+                      editHref={`/admin/countries/${c.id}/edit`}
+                      label={c.name}
+                      deleteAction={deleteCountryAction}
+                      deleteId={c.id}
+                      deleteConfirm={`Supprimer le pays « ${c.name} » ?`}
+                    />
                   </td>
                 </tr>
               ))}

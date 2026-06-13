@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
+import { StatCard } from '@/components/ui/stat-card';
+import { StatusPill } from '@/components/ui/status-pill';
 import { paginate, resolvePageSize } from '@/lib/paginate';
 import { apiFetchOr } from '@/lib/api';
 import { fetchRoleOptions } from '@/lib/role-options';
@@ -217,45 +219,6 @@ export default async function AdminUsersPage({
         <Pagination page={safePage} pageSize={PAGE_SIZE} total={rows.length} />
       </Card>
     </div>
-  );
-}
-
-function StatCard({
-  value,
-  label,
-  tone = 'default',
-}: {
-  value: number;
-  label: string;
-  tone?: 'default' | 'leaf' | 'zinc';
-}) {
-  const valueClass = {
-    default: 'text-zinc-900 dark:text-zinc-50',
-    leaf: 'text-leaf-700 dark:text-leaf-400',
-    zinc: 'text-zinc-400 dark:text-zinc-500',
-  }[tone];
-  return (
-    <Card className="p-5">
-      <p className={`text-3xl font-bold tracking-tight ${valueClass}`}>{value}</p>
-      <p className="mt-1 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-        {label}
-      </p>
-    </Card>
-  );
-}
-
-function StatusPill({ active }: { active: boolean }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        active
-          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
-          : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
-      }`}
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-zinc-400'}`} />
-      {active ? 'Actif' : 'Inactif'}
-    </span>
   );
 }
 
