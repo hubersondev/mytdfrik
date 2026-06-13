@@ -2,6 +2,8 @@ import { Inbox, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { Badge, priorityVariant } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Pagination } from '@/components/ui/pagination';
+import { paginate, resolvePageSize } from '@/lib/paginate';
 import { apiFetchOr } from '@/lib/api';
 import { priorityLabel, statusLabel, statusVariant, type RequestSummary } from '@/lib/requests';
 import { bucketKeyFromQuery } from '../../client/_components/filter-buckets';
@@ -19,12 +21,19 @@ const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyl
 export default async function AdminRequestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; sort?: string; assignee?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    sort?: string;
+    assignee?: string;
+    page?: string;
+    size?: string;
+  }>;
 }) {
   const params = await searchParams;
   const bucket = bucketKeyFromQuery(params.status);
   const sort = sortKeyFromQuery(params.sort);
   const mine = params.assignee === 'me';
+  const PAGE_SIZE = resolvePageSize(params.size);
 
   const qs = new URLSearchParams({ limit: '100' });
   if (params.status) qs.set('status', params.status);
@@ -46,6 +55,7 @@ export default async function AdminRequestsPage({
   });
 
   const newCount = page.items.filter((r) => r.status === 'NOUVELLE').length;
+  const { pageItems, safePage } = paginate(page.items, Number(params.page) || 1, PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,7 +65,7 @@ export default async function AdminRequestsPage({
           Traitement
         </div>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             File des demandes
           </h1>
           <Badge variant="secondary">{page.items.length}</Badge>
@@ -108,7 +118,7 @@ export default async function AdminRequestsPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
-              {page.items.map((r) => (
+              {pageItems.map((r) => (
                 <tr
                   key={r.id}
                   className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
@@ -159,6 +169,7 @@ export default async function AdminRequestsPage({
             </tbody>
           </table>
         </div>
+        <Pagination page={safePage} pageSize={PAGE_SIZE} total={page.items.length} />
       </Card>
     </div>
   );

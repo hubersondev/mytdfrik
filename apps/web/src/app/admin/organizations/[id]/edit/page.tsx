@@ -48,7 +48,7 @@ export default async function EditOrganizationPage({
             <Pencil className="h-5 w-5" />
           </span>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               {org.name}
             </h1>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">

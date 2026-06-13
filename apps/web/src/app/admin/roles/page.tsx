@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Pagination } from '@/components/ui/pagination';
+import { paginate, resolvePageSize } from '@/lib/paginate';
 import { apiFetchOr } from '@/lib/api';
 import {
   applyClientSideView,
@@ -21,6 +23,8 @@ export default async function AdminRolesPage({
     scope?: string;
     status?: string;
     q?: string;
+    page?: string;
+    size?: string;
     created?: string;
     updated?: string;
   }>;
@@ -29,12 +33,14 @@ export default async function AdminRolesPage({
   const scope = scopeKeyFromQuery(params.scope);
   const status = statusKeyFromQuery(params.status);
   const query = params.q ?? '';
+  const PAGE_SIZE = resolvePageSize(params.size);
 
   // Le filtre scope est délégué à l'API ; statut + recherche en mémoire.
   const qs = new URLSearchParams();
   if (scope !== 'ALL') qs.set('scope', scope);
   const all = await apiFetchOr<RoleRow[]>(`/roles${qs.toString() ? `?${qs.toString()}` : ''}`, []);
   const rows = applyClientSideView(all, { status, query });
+  const { pageItems, safePage } = paginate(rows, Number(params.page) || 1, PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,7 +51,7 @@ export default async function AdminRolesPage({
             Administration
           </div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               Rôles &amp; permissions
             </h1>
             <Badge variant="secondary">{all.length}</Badge>
@@ -82,7 +88,7 @@ export default async function AdminRolesPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
-              {rows.map((r) => (
+              {pageItems.map((r) => (
                 <tr
                   key={r.id}
                   className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
@@ -147,6 +153,7 @@ export default async function AdminRolesPage({
             </tbody>
           </table>
         </div>
+        <Pagination page={safePage} pageSize={PAGE_SIZE} total={rows.length} />
       </Card>
     </div>
   );

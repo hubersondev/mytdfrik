@@ -32,7 +32,7 @@ const NAV_PRIMARY: NavItem[] = [
 ];
 
 const NAV_SECONDARY: NavItem[] = [
-  { label: 'Notifications', href: '/client/notifications', icon: Bell, badge: 'S8' },
+  { label: 'Notifications', href: '/client/notifications', icon: Bell },
   { label: "Centre d'aide", href: '/client/help', icon: LifeBuoy, badge: 'S9' },
 ];
 
@@ -54,18 +54,32 @@ export function ClientSidebar({ collapsed }: SidebarProps) {
     <TooltipProvider delayDuration={200} skipDelayDuration={0}>
       <aside
         className={cn(
-          'sticky top-0 hidden h-screen shrink-0 flex-col self-start border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 lg:flex',
+          'sticky top-0 hidden h-screen shrink-0 flex-col self-start bg-gradient-to-b from-leaf-900 to-leaf-950 text-leaf-50 shadow-xl lg:flex',
           'transition-[width] duration-200 ease-out',
           collapsed ? 'w-16' : 'w-64',
         )}
       >
         <div
           className={cn(
-            'flex h-16 items-center border-b border-zinc-200/70 px-3 dark:border-zinc-800',
+            'flex h-16 items-center border-b border-white/10 px-3',
             collapsed ? 'justify-center' : 'justify-between gap-2',
           )}
         >
-          {!collapsed && <Logo size={28} priority />}
+          {!collapsed && (
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/15">
+                <Logo size={22} priority />
+              </span>
+              <span className="flex min-w-0 flex-col leading-tight">
+                <span className="truncate text-sm font-bold tracking-tight text-white">
+                  MyTDFRIK
+                </span>
+                <span className="truncate text-[10px] uppercase tracking-wider text-leaf-300">
+                  Espace Client
+                </span>
+              </span>
+            </div>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -73,7 +87,7 @@ export function ClientSidebar({ collapsed }: SidebarProps) {
                 onClick={toggle}
                 disabled={pending}
                 aria-label={collapsed ? 'Étendre la sidebar' : 'Réduire la sidebar'}
-                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-leaf-50 hover:text-leaf-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-leaf-950/40 dark:hover:text-leaf-300"
+                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-leaf-200 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {collapsed ? (
                   <PanelLeftOpen className="h-4 w-4" />
@@ -102,9 +116,9 @@ export function ClientSidebar({ collapsed }: SidebarProps) {
         </nav>
 
         {!collapsed && (
-          <div className="flex items-center justify-start border-t border-zinc-200/70 px-3 py-3 dark:border-zinc-800">
-            <span className="text-[10px] uppercase tracking-wider text-zinc-500 dark:text-zinc-500">
-              Espace Client · Sprint 3
+          <div className="flex items-center justify-start border-t border-white/10 px-3 py-3">
+            <span className="text-[10px] uppercase tracking-wider text-leaf-400">
+              MyTDFRIK · Espace Client
             </span>
           </div>
         )}
@@ -127,7 +141,7 @@ function NavSection({
   return (
     <div className="flex flex-col gap-0.5">
       {!collapsed && (
-        <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-500">
+        <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-leaf-400/90">
           {title}
         </p>
       )}
@@ -155,31 +169,30 @@ function NavItemLink({
   const isDisabled = Boolean(item.badge);
 
   const baseClass = cn(
-    'group relative flex h-9 items-center rounded-md text-sm transition-colors',
+    'group relative flex h-9 items-center rounded-lg text-sm transition-colors',
     collapsed ? 'mx-auto w-9 justify-center px-0' : 'w-full gap-2.5 px-3',
     isActive
-      ? 'bg-leaf-50 text-leaf-900 dark:bg-leaf-900/40 dark:text-leaf-100'
-      : 'text-zinc-600 hover:bg-zinc-100/70 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100',
-    isDisabled &&
-      'cursor-not-allowed opacity-60 hover:bg-transparent hover:text-zinc-600 dark:hover:bg-transparent dark:hover:text-zinc-400',
+      ? 'bg-white/10 font-medium text-white'
+      : 'text-leaf-100/80 hover:bg-white/5 hover:text-white',
+    isDisabled && 'cursor-not-allowed opacity-50 hover:bg-transparent hover:text-leaf-100/80',
   );
 
   const iconClass = cn(
     'h-4 w-4 shrink-0',
-    isActive ? 'text-leaf-700 dark:text-leaf-400' : 'text-zinc-500 dark:text-zinc-400',
+    isActive ? 'text-sand-400' : 'text-leaf-300 group-hover:text-leaf-100',
   );
 
   const inner = (
     <>
       {isActive && !collapsed && (
-        <span className="absolute bottom-1.5 left-0 top-1.5 w-0.5 rounded-r-full bg-leaf-700 dark:bg-leaf-500" />
+        <span className="absolute bottom-1.5 left-0 top-1.5 w-1 rounded-r-full bg-sand-400" />
       )}
       <Icon className={iconClass} />
       {!collapsed && (
         <>
-          <span className={cn('flex-1 truncate', isActive && 'font-medium')}>{item.label}</span>
+          <span className="flex-1 truncate">{item.label}</span>
           {item.badge && (
-            <span className="rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+            <span className="rounded-full bg-brand-500/25 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand-200">
               {item.badge}
             </span>
           )}

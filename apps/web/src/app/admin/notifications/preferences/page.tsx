@@ -21,7 +21,7 @@ export default async function AdminNotificationPreferencesPage() {
       </div>
       <header className="flex items-center gap-2">
         <SlidersHorizontal className="h-4 w-4 text-leaf-700 dark:text-leaf-400" />
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
           Préférences de notification
         </h1>
       </header>

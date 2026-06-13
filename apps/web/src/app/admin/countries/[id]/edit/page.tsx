@@ -31,7 +31,7 @@ export default async function EditCountryPage({ params }: { params: Promise<{ id
             <Pencil className="h-5 w-5" />
           </span>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               {country.name}
             </h1>
             <p className="font-mono text-sm text-zinc-500 dark:text-zinc-400">{country.code}</p>

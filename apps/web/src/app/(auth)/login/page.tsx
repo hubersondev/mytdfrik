@@ -31,12 +31,15 @@ export default async function LoginPage({
       : null;
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-sand-50 via-white to-leaf-50/60 px-4 dark:from-zinc-950 dark:via-zinc-950 dark:to-leaf-950/20">
+      {/* Halos décoratifs diffus aux coins (identité TECHDIFRIK). */}
+      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-leaf-300/20 blur-3xl dark:bg-leaf-800/20" />
+      <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-brand-300/20 blur-3xl dark:bg-brand-900/20" />
       <div className="absolute right-4 top-4">
         <ThemeToggle current={theme} />
       </div>
 
-      <div className="flex w-full max-w-sm flex-col gap-6">
+      <div className="relative z-10 flex w-full max-w-sm flex-col gap-6">
         <Link
           href="/"
           className="flex items-center justify-center gap-3 text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
@@ -47,7 +50,7 @@ export default async function LoginPage({
           </span>
         </Link>
 
-        <Card className="p-8">
+        <Card className="p-8 shadow-soft-lg">
           <div className="mb-6 flex flex-col items-center gap-2 text-center">
             <Badge variant="outline">Connexion</Badge>
             <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">

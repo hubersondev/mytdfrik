@@ -27,7 +27,7 @@ export function ClientTopBar({ user, theme, wsToken, initialUnread }: TopBarProp
   const [loggingOut, startLogout] = useTransition();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-zinc-200 bg-white px-6 dark:border-zinc-800 dark:bg-zinc-950">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-zinc-200/70 bg-white/80 px-6 backdrop-blur-md dark:border-zinc-800/70 dark:bg-zinc-950/70">
       <div className="hidden flex-col leading-tight md:flex">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-leaf-700 dark:text-leaf-400">
           Espace Client

@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { Badge, priorityVariant } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Pagination } from '@/components/ui/pagination';
+import { paginate, resolvePageSize } from '@/lib/paginate';
 import { apiFetchOr } from '@/lib/api';
 import { priorityLabel, statusLabel, statusVariant, type RequestSummary } from '@/lib/requests';
 import { bucketKeyFromQuery, FILTER_BUCKETS } from '../_components/filter-buckets';
@@ -27,18 +29,20 @@ const dateFormatter = new Intl.DateTimeFormat('fr-FR', {
 export default async function ClientRequestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; sort?: string }>;
+  searchParams: Promise<{ status?: string; sort?: string; page?: string; size?: string }>;
 }) {
   const params = await searchParams;
   const bucket = bucketKeyFromQuery(params.status);
   const sort = sortKeyFromQuery(params.sort);
-  const qs = new URLSearchParams({ limit: '50' });
+  const PAGE_SIZE = resolvePageSize(params.size);
+  const qs = new URLSearchParams({ limit: '100' });
   if (params.status) qs.set('status', params.status);
   if (sort !== DEFAULT_SORT) qs.set('sort', sort);
   const page = await apiFetchOr<CursorPage<RequestSummary>>(`/requests?${qs.toString()}`, {
     items: [],
     page_info: { has_next: false, next_cursor: null },
   });
+  const { pageItems, safePage } = paginate(page.items, Number(params.page) || 1, PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,7 +52,7 @@ export default async function ClientRequestsPage({
             <FileText className="h-3.5 w-3.5" />
             Mes demandes
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             Suivi de vos demandes
           </h1>
           <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
@@ -83,7 +87,7 @@ export default async function ClientRequestsPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
-              {page.items.map((r) => (
+              {pageItems.map((r) => (
                 <tr
                   key={r.id}
                   className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
@@ -154,6 +158,7 @@ export default async function ClientRequestsPage({
             </tbody>
           </table>
         </div>
+        <Pagination page={safePage} pageSize={PAGE_SIZE} total={page.items.length} />
       </Card>
     </div>
   );

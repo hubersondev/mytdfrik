@@ -48,7 +48,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
             <LayoutDashboard className="h-3.5 w-3.5" />
             Tableau de bord
           </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             Pilotage de l&apos;activité
           </h1>
         </div>

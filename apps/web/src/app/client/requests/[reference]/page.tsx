@@ -103,7 +103,7 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
             {priorityLabel(request.effectivePriorityId)}
           </Badge>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
           {request.title}
         </h1>
         <p className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
