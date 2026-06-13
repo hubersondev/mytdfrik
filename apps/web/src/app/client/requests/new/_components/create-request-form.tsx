@@ -1,13 +1,14 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, ArrowLeft, ArrowRight, Check, Loader2, Send } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, Bug, Check, Loader2, Send } from 'lucide-react';
 import { useState, useTransition } from 'react';
-import { useForm, type FieldErrors } from 'react-hook-form';
+import { useForm, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FREQUENCY_LABELS, type ProductOption } from '@/lib/bug';
 import {
   IMPACT_OPTIONS,
   URGENCY_OPTIONS,
@@ -21,21 +22,53 @@ import { createRequestSchema, type CreateRequestInput } from '../schema';
 
 interface Props {
   categories: CategoryOption[];
+  products: ProductOption[];
 }
 
-type StepIndex = 0 | 1 | 2 | 3;
+type StepKey = 'category' | 'description' | 'bug' | 'impact' | 'review';
 
-const STEP_TITLES = ['Catégorie', 'Description', 'Impact et urgence', 'Récapitulatif'] as const;
+const STEP_LABELS: Record<StepKey, string> = {
+  category: 'Catégorie',
+  description: 'Description',
+  bug: 'Détails du bug',
+  impact: 'Impact et urgence',
+  review: 'Récapitulatif',
+};
 
-const STEP_FIELDS: Array<Array<keyof CreateRequestInput>> = [
-  ['categoryId'],
-  ['title', 'description'],
-  ['impact', 'urgency', 'clientContextNote'],
-  [],
-];
+const STEP_FIELDS: Record<StepKey, Array<keyof CreateRequestInput | `bugDetails.${string}`>> = {
+  category: ['categoryId'],
+  description: ['title', 'description'],
+  bug: [
+    'bugDetails.productId',
+    'bugDetails.productVersion',
+    'bugDetails.expectedBehavior',
+    'bugDetails.observedBehavior',
+    'bugDetails.reproductionSteps',
+    'bugDetails.occurredAt',
+    'bugDetails.frequencyLabel',
+  ],
+  impact: ['impact', 'urgency', 'clientContextNote'],
+  review: [],
+};
 
-export function CreateRequestForm({ categories }: Props) {
-  const [step, setStep] = useState<StepIndex>(0);
+const EMPTY_BUG = {
+  productId: '',
+  productVersion: '',
+  expectedBehavior: '',
+  observedBehavior: '',
+  reproductionSteps: '',
+  occurredAt: '',
+  isRecurrent: false,
+  frequencyLabel: undefined,
+  environmentOs: '',
+  environmentBrowser: '',
+  environmentHardware: '',
+  isBlocking: false,
+  errorMessages: '',
+} as const;
+
+export function CreateRequestForm({ categories, products }: Props) {
+  const [stepIdx, setStepIdx] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, startSubmit] = useTransition();
 
@@ -49,23 +82,43 @@ export function CreateRequestForm({ categories }: Props) {
       impact: undefined as unknown as ImpactValue,
       urgency: undefined as unknown as UrgencyValue,
       clientContextNote: '',
+      bugDetails: undefined,
     },
   });
 
   const values = form.watch();
   const selectedCategory = categories.find((c) => c.id === values.categoryId);
+  const isBug = Boolean(selectedCategory?.requiresBugDetails);
+
+  // Étapes dynamiques : l'étape « Détails du bug » n'apparaît que pour une
+  // catégorie de type bug (CDC §6.2.1).
+  const steps: StepKey[] = isBug
+    ? ['category', 'description', 'bug', 'impact', 'review']
+    : ['category', 'description', 'impact', 'review'];
+  const step = steps[Math.min(stepIdx, steps.length - 1)];
+  const isLast = stepIdx >= steps.length - 1;
+
+  const onCategoryChange = (id: string) => {
+    form.setValue('categoryId', id, { shouldValidate: true, shouldDirty: true });
+    const cat = categories.find((c) => c.id === id);
+    if (cat?.requiresBugDetails) {
+      if (!values.bugDetails) form.setValue('bugDetails', { ...EMPTY_BUG });
+    } else {
+      form.setValue('bugDetails', undefined);
+    }
+  };
 
   async function goNext() {
-    const ok = await form.trigger(STEP_FIELDS[step]);
-    if (ok && step < 3) {
-      setStep((step + 1) as StepIndex);
+    const ok = await form.trigger(STEP_FIELDS[step] as never);
+    if (ok && !isLast) {
+      setStepIdx(stepIdx + 1);
       setFormError(null);
     }
   }
 
   function goBack() {
-    if (step > 0) {
-      setStep((step - 1) as StepIndex);
+    if (stepIdx > 0) {
+      setStepIdx(stepIdx - 1);
       setFormError(null);
     }
   }
@@ -74,29 +127,17 @@ export function CreateRequestForm({ categories }: Props) {
     setFormError(null);
     startSubmit(async () => {
       const result = await submitRequestAction(data);
-      // En cas de succès la Server Action redirige : on n'arrive ici qu'en cas
-      // d'erreur de validation côté serveur ou d'erreur API.
       if (result && result.ok === false) {
-        const fieldEntries = Object.entries(result.fieldErrors) as Array<
-          [keyof CreateRequestInput, string]
-        >;
+        const fieldEntries = Object.entries(result.fieldErrors) as Array<[string, string]>;
         for (const [field, message] of fieldEntries) {
-          form.setError(field, { type: 'server', message });
+          form.setError(field as never, { type: 'server', message });
         }
-        if (result.formError) {
-          setFormError(result.formError);
-        }
-        // Reset step to where errors occurred so user can fix them.
-        for (let i = 0; i < STEP_FIELDS.length; i++) {
-          const stepFields = STEP_FIELDS[i];
-          if (stepFields.some((f) => f in result.fieldErrors)) {
-            setStep(i as StepIndex);
-            break;
-          }
-        }
+        if (result.formError) setFormError(result.formError);
       }
     });
   }
+
+  const selectedProduct = products.find((p) => p.id === values.bugDetails?.productId);
 
   return (
     <form
@@ -104,21 +145,19 @@ export function CreateRequestForm({ categories }: Props) {
       className="flex flex-col gap-6"
       aria-busy={submitting}
     >
-      <Stepper currentStep={step} />
+      <Stepper steps={steps} currentStep={stepIdx} />
 
       <Card className="p-6 sm:p-8">
-        {step === 0 && (
+        {step === 'category' && (
           <CategoryStep
             categories={categories}
             value={values.categoryId}
-            onChange={(id) =>
-              form.setValue('categoryId', id, { shouldValidate: true, shouldDirty: true })
-            }
+            onChange={onCategoryChange}
             errors={form.formState.errors}
           />
         )}
 
-        {step === 1 && (
+        {step === 'description' && (
           <DescriptionStep
             register={form.register}
             errors={form.formState.errors}
@@ -126,10 +165,22 @@ export function CreateRequestForm({ categories }: Props) {
           />
         )}
 
-        {step === 2 && (
+        {step === 'bug' && (
+          <BugStep
+            products={products}
+            selectedProduct={selectedProduct ?? null}
+            isRecurrent={Boolean(values.bugDetails?.isRecurrent)}
+            isBlocking={Boolean(values.bugDetails?.isBlocking)}
+            register={form.register}
+            errors={form.formState.errors}
+          />
+        )}
+
+        {step === 'impact' && (
           <ImpactUrgencyStep
             impact={values.impact}
             urgency={values.urgency}
+            isBlockingBug={isBug && Boolean(values.bugDetails?.isBlocking)}
             onImpactChange={(v) =>
               form.setValue('impact', v, { shouldValidate: true, shouldDirty: true })
             }
@@ -142,7 +193,9 @@ export function CreateRequestForm({ categories }: Props) {
           />
         )}
 
-        {step === 3 && <ReviewStep values={values} selectedCategory={selectedCategory ?? null} />}
+        {step === 'review' && (
+          <ReviewStep values={values} selectedCategory={selectedCategory ?? null} />
+        )}
       </Card>
 
       {formError && (
@@ -156,12 +209,17 @@ export function CreateRequestForm({ categories }: Props) {
       )}
 
       <div className="flex items-center justify-between gap-2">
-        <Button type="button" variant="ghost" onClick={goBack} disabled={step === 0 || submitting}>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={goBack}
+          disabled={stepIdx === 0 || submitting}
+        >
           <ArrowLeft className="h-4 w-4" />
           Précédent
         </Button>
 
-        {step < 3 ? (
+        {!isLast ? (
           <Button type="button" onClick={goNext} disabled={submitting}>
             Suivant
             <ArrowRight className="h-4 w-4" />
@@ -186,14 +244,14 @@ export function CreateRequestForm({ categories }: Props) {
   );
 }
 
-function Stepper({ currentStep }: { currentStep: number }) {
+function Stepper({ steps, currentStep }: { steps: StepKey[]; currentStep: number }) {
   return (
     <ol className="flex flex-wrap items-center gap-2 text-xs">
-      {STEP_TITLES.map((title, idx) => {
+      {steps.map((key, idx) => {
         const isActive = idx === currentStep;
         const isDone = idx < currentStep;
         return (
-          <li key={title} className="flex items-center gap-2">
+          <li key={key} className="flex items-center gap-2">
             <span
               className={cn(
                 'flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold',
@@ -214,9 +272,9 @@ function Stepper({ currentStep }: { currentStep: number }) {
                 isActive ? 'text-zinc-900 dark:text-zinc-50' : 'text-zinc-500 dark:text-zinc-400',
               )}
             >
-              {title}
+              {STEP_LABELS[key]}
             </span>
-            {idx < STEP_TITLES.length - 1 && (
+            {idx < steps.length - 1 && (
               <span className="mx-1 hidden h-px w-8 bg-zinc-200 dark:bg-zinc-800 sm:inline-block" />
             )}
           </li>
@@ -235,6 +293,9 @@ function FieldError({ message }: { message?: string }) {
     </p>
   );
 }
+
+const FIELD_CLASS =
+  'mt-1 flex w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:placeholder:text-zinc-500 dark:focus-visible:ring-zinc-100';
 
 function CategoryStep({
   categories,
@@ -278,8 +339,13 @@ function CategoryStep({
             >
               <div className="flex w-full items-center justify-between gap-2">
                 <span className="font-medium text-zinc-900 dark:text-zinc-50">{cat.label}</span>
-                <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-500">
-                  {cat.code}
+                <span className="flex items-center gap-1.5">
+                  {cat.requiresBugDetails && (
+                    <Bug className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                  )}
+                  <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-500">
+                    {cat.code}
+                  </span>
                 </span>
               </div>
               {cat.description && (
@@ -304,7 +370,7 @@ function DescriptionStep({
   errors,
   descriptionLength,
 }: {
-  register: ReturnType<typeof useForm<CreateRequestInput>>['register'];
+  register: UseFormRegister<CreateRequestInput>;
   errors: FieldErrors<CreateRequestInput>;
   descriptionLength: number;
 }) {
@@ -342,7 +408,7 @@ function DescriptionStep({
           rows={8}
           maxLength={5000}
           placeholder="Expliquez ce que vous essayez de faire, ce que vous observez, et tout détail utile (dates, écrans, messages d'erreur…)."
-          className="mt-1 flex w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:placeholder:text-zinc-500 dark:focus-visible:ring-zinc-100"
+          className={FIELD_CLASS}
           {...register('description')}
         />
         <FieldError message={errors.description?.message} />
@@ -351,9 +417,211 @@ function DescriptionStep({
   );
 }
 
+function BugStep({
+  products,
+  selectedProduct,
+  isRecurrent,
+  isBlocking,
+  register,
+  errors,
+}: {
+  products: ProductOption[];
+  selectedProduct: ProductOption | null;
+  isRecurrent: boolean;
+  isBlocking: boolean;
+  register: UseFormRegister<CreateRequestInput>;
+  errors: FieldErrors<CreateRequestInput>;
+}) {
+  const bugErrors = errors.bugDetails as FieldErrors<NonNullable<CreateRequestInput['bugDetails']>>;
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <Bug className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          Détails du dysfonctionnement
+        </h2>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          Ces informations structurées accélèrent le diagnostic par nos équipes (CDC §6.2).
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="bug-product">Produit concerné</Label>
+          <select id="bug-product" className={FIELD_CLASS} {...register('bugDetails.productId')}>
+            <option value="">Sélectionnez un produit…</option>
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label} ({p.code})
+              </option>
+            ))}
+          </select>
+          <FieldError message={bugErrors?.productId?.message} />
+        </div>
+        <div>
+          <Label htmlFor="bug-version">Version</Label>
+          <Input
+            id="bug-version"
+            type="text"
+            maxLength={60}
+            placeholder="Ex. 2.3.1"
+            {...register('bugDetails.productVersion')}
+          />
+          <FieldError message={bugErrors?.productVersion?.message} />
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="bug-expected">Comportement attendu</Label>
+        <textarea
+          id="bug-expected"
+          rows={2}
+          maxLength={2000}
+          placeholder="Ce que vous vouliez obtenir."
+          className={FIELD_CLASS}
+          {...register('bugDetails.expectedBehavior')}
+        />
+        <FieldError message={bugErrors?.expectedBehavior?.message} />
+      </div>
+
+      <div>
+        <Label htmlFor="bug-observed">Comportement observé</Label>
+        <textarea
+          id="bug-observed"
+          rows={2}
+          maxLength={2000}
+          placeholder="Ce qui s'est réellement produit."
+          className={FIELD_CLASS}
+          {...register('bugDetails.observedBehavior')}
+        />
+        <FieldError message={bugErrors?.observedBehavior?.message} />
+      </div>
+
+      <div>
+        <Label htmlFor="bug-steps">Étapes de reproduction</Label>
+        <textarea
+          id="bug-steps"
+          rows={3}
+          maxLength={3000}
+          placeholder={'1. …\n2. …\n3. …'}
+          className={FIELD_CLASS}
+          {...register('bugDetails.reproductionSteps')}
+        />
+        <FieldError message={bugErrors?.reproductionSteps?.message} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="bug-occurred">Date/heure d&apos;apparition</Label>
+          <Input id="bug-occurred" type="datetime-local" {...register('bugDetails.occurredAt')} />
+          <FieldError message={bugErrors?.occurredAt?.message} />
+        </div>
+        <div className="flex flex-col justify-end gap-2 pb-1">
+          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-700"
+              {...register('bugDetails.isRecurrent')}
+            />
+            Bug récurrent
+          </label>
+          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-700"
+              {...register('bugDetails.isBlocking')}
+            />
+            Bloque mon activité
+          </label>
+        </div>
+      </div>
+
+      {isRecurrent && (
+        <div>
+          <Label htmlFor="bug-frequency">Fréquence</Label>
+          <select
+            id="bug-frequency"
+            className={FIELD_CLASS}
+            {...register('bugDetails.frequencyLabel')}
+          >
+            <option value="">Sélectionnez…</option>
+            {FREQUENCY_LABELS.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+          <FieldError message={bugErrors?.frequencyLabel?.message} />
+        </div>
+      )}
+
+      {isBlocking && (
+        <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          Un bug bloquant impose un impact « Blocage total » ou « Blocage partiel » à l&apos;étape
+          suivante.
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {selectedProduct?.requiresOs && (
+          <div>
+            <Label htmlFor="bug-os">Système d&apos;exploitation</Label>
+            <Input
+              id="bug-os"
+              type="text"
+              maxLength={120}
+              placeholder="Ex. Windows 11"
+              {...register('bugDetails.environmentOs')}
+            />
+            <FieldError message={bugErrors?.environmentOs?.message} />
+          </div>
+        )}
+        {selectedProduct?.requiresBrowser && (
+          <div>
+            <Label htmlFor="bug-browser">Navigateur</Label>
+            <Input
+              id="bug-browser"
+              type="text"
+              maxLength={120}
+              placeholder="Ex. Chrome 120"
+              {...register('bugDetails.environmentBrowser')}
+            />
+            <FieldError message={bugErrors?.environmentBrowser?.message} />
+          </div>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="bug-hardware">Configuration matérielle (optionnel)</Label>
+        <Input
+          id="bug-hardware"
+          type="text"
+          maxLength={300}
+          placeholder="Ex. Poste fixe, 16 Go RAM"
+          {...register('bugDetails.environmentHardware')}
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="bug-errors">Messages d&apos;erreur (optionnel)</Label>
+        <textarea
+          id="bug-errors"
+          rows={2}
+          maxLength={2000}
+          placeholder="Collez ici les messages d'erreur affichés."
+          className={FIELD_CLASS}
+          {...register('bugDetails.errorMessages')}
+        />
+      </div>
+    </div>
+  );
+}
+
 function ImpactUrgencyStep({
   impact,
   urgency,
+  isBlockingBug,
   onImpactChange,
   onUrgencyChange,
   register,
@@ -362,9 +630,10 @@ function ImpactUrgencyStep({
 }: {
   impact: ImpactValue | undefined;
   urgency: UrgencyValue | undefined;
+  isBlockingBug: boolean;
   onImpactChange: (v: ImpactValue) => void;
   onUrgencyChange: (v: UrgencyValue) => void;
-  register: ReturnType<typeof useForm<CreateRequestInput>>['register'];
+  register: UseFormRegister<CreateRequestInput>;
   errors: FieldErrors<CreateRequestInput>;
   contextLength: number;
 }) {
@@ -387,17 +656,22 @@ function ImpactUrgencyStep({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {IMPACT_OPTIONS.map((opt) => {
             const selected = impact === opt.value;
+            // Un bug bloquant restreint l'impact aux deux niveaux de blocage.
+            const disabled =
+              isBlockingBug && opt.value !== 'BLOCAGE_TOTAL' && opt.value !== 'BLOCAGE_PARTIEL';
             return (
               <button
                 key={opt.value}
                 type="button"
                 aria-pressed={selected}
+                disabled={disabled}
                 onClick={() => onImpactChange(opt.value)}
                 className={cn(
                   'flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors',
                   selected
                     ? 'border-leaf-600 bg-leaf-50/60 ring-1 ring-leaf-600 dark:border-leaf-500 dark:bg-leaf-950/30 dark:ring-leaf-500'
                     : 'border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900/40 dark:hover:border-zinc-700',
+                  disabled && 'cursor-not-allowed opacity-40 hover:border-zinc-200',
                 )}
               >
                 <span className="font-medium text-zinc-900 dark:text-zinc-50">{opt.label}</span>
@@ -448,7 +722,7 @@ function ImpactUrgencyStep({
           rows={3}
           maxLength={500}
           placeholder="Échéances, contraintes externes, parties prenantes concernées…"
-          className="mt-1 flex w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:placeholder:text-zinc-500"
+          className={FIELD_CLASS}
           {...register('clientContextNote')}
         />
         <FieldError message={errors.clientContextNote?.message} />
@@ -500,6 +774,16 @@ function ReviewStep({
             {values.description}
           </p>
         </ReviewField>
+        {values.bugDetails && (
+          <ReviewField label="Bug" className="sm:col-span-2">
+            <p className="text-sm text-zinc-700 dark:text-zinc-300">
+              Version {values.bugDetails.productVersion || '—'}
+              {values.bugDetails.isBlocking && ' · bloquant'}
+              {values.bugDetails.isRecurrent &&
+                ` · récurrent (${values.bugDetails.frequencyLabel ?? '?'})`}
+            </p>
+          </ReviewField>
+        )}
         {values.clientContextNote && (
           <ReviewField label="Contexte additionnel" className="sm:col-span-2">
             <p className="whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">

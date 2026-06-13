@@ -1,6 +1,7 @@
 import { PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { apiFetchOr } from '@/lib/api';
+import type { ProductOption } from '@/lib/bug';
 import type { CategoryOption } from '@/lib/requests';
 import { CreateRequestForm } from './_components/create-request-form';
 
@@ -9,16 +10,24 @@ interface CursorPage<T> {
   page_info: { has_next: boolean; next_cursor: string | null };
 }
 
+function emptyPage<T>(): CursorPage<T> {
+  return { items: [], page_info: { has_next: false, next_cursor: null } };
+}
+
 export const metadata = {
   title: 'Nouvelle demande · MyTDFRIK',
 };
 
 export default async function NewRequestPage() {
-  const page = await apiFetchOr<CursorPage<CategoryOption>>('/categories?limit=100', {
-    items: [],
-    page_info: { has_next: false, next_cursor: null },
-  });
-  const categories = page.items.filter((c) => c.isActive);
+  const [catPage, prodPage] = await Promise.all([
+    apiFetchOr<CursorPage<CategoryOption>>('/categories?limit=100', emptyPage<CategoryOption>()),
+    apiFetchOr<CursorPage<ProductOption>>(
+      '/products?active_only=true&limit=100',
+      emptyPage<ProductOption>(),
+    ),
+  ]);
+  const categories = catPage.items.filter((c) => c.isActive);
+  const products = prodPage.items.filter((p) => p.isActive);
 
   return (
     <div className="flex flex-col gap-6">
@@ -43,7 +52,7 @@ export default async function NewRequestPage() {
         </p>
       </header>
 
-      <CreateRequestForm categories={categories} />
+      <CreateRequestForm categories={categories} products={products} />
     </div>
   );
 }

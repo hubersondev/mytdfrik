@@ -59,3 +59,34 @@ export async function applyTransitionAction(
   revalidatePath('/admin/requests');
   return { ok: true };
 }
+
+export interface DiagnosticPayload {
+  isReproduced: 'OUI' | 'NON' | 'PARTIEL' | 'NON_TESTE';
+  rootCause: string;
+  correctiveAction: string;
+  workaround?: string;
+  fixDeployed?: boolean;
+  workaroundOnly?: boolean;
+}
+
+/** Consigne le diagnostic d'un bug (Responsable, CDC §6.3.2). */
+export async function submitDiagnosticAction(
+  reference: string,
+  requestId: string,
+  payload: DiagnosticPayload,
+): Promise<TransitionResult> {
+  try {
+    await apiFetch(`/requests/${requestId}/bug-diagnostic`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    const apiError = error as { status?: number; message?: string };
+    if (apiError?.status === 403) {
+      return { ok: false, message: 'Seul un responsable traitant peut consigner le diagnostic.' };
+    }
+    return { ok: false, message: apiError?.message ?? 'Échec de l’enregistrement du diagnostic.' };
+  }
+  revalidatePath(`/admin/requests/${reference}`);
+  return { ok: true };
+}

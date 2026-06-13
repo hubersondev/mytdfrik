@@ -9,23 +9,44 @@ import { Label } from '@/components/ui/label';
 import { priorityLabel, type PriorityCode, type RequestStatus } from '@/lib/requests';
 import { transitionUi } from '@/lib/transitions';
 import { cn } from '@/lib/utils';
-import { applyTransitionAction } from '../actions';
 
 interface AssigneeOption {
   id: string;
   label: string;
 }
 
+export interface TransitionActionResult {
+  ok: boolean;
+  message?: string;
+  currentStatus?: string;
+}
+
+export interface TransitionActionPayload {
+  expectedStatus: string;
+  note?: string;
+  assigneeId?: string;
+  effectivePriorityId?: string;
+}
+
 interface Props {
   reference: string;
   requestId: string;
   currentStatus: RequestStatus;
-  /** Codes de transitions applicables (depuis l'API). */
+  /** Codes de transitions applicables (depuis l'API, filtrés par acteur). */
   codes: string[];
-  /** Responsables affectables (pour T06). */
-  assignees: AssigneeOption[];
+  /** Server action qui applique la transition (admin ou client → revalidation adaptée). */
+  action: (
+    reference: string,
+    requestId: string,
+    code: string,
+    payload: TransitionActionPayload,
+  ) => Promise<TransitionActionResult>;
+  /** Responsables affectables (pour T06 — vide côté Client). */
+  assignees?: AssigneeOption[];
   /** Priorité système — l'ajustement T02 est borné à ±1 niveau (CDC §5.5). */
-  systemPriority: PriorityCode;
+  systemPriority?: PriorityCode;
+  /** Titre de la carte. */
+  title?: string;
 }
 
 const PRIORITY_ORDER: PriorityCode[] = ['P0', 'P1', 'P2', 'P3', 'P4'];
@@ -44,8 +65,10 @@ export function TransitionPanel({
   requestId,
   currentStatus,
   codes,
-  assignees,
+  action,
+  assignees = [],
   systemPriority,
+  title = 'Actions',
 }: Props) {
   const router = useRouter();
   const [active, setActive] = useState<string | null>(null);
@@ -59,10 +82,10 @@ export function TransitionPanel({
     return (
       <Card className="p-5">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Actions
+          {title}
         </h2>
         <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
-          Aucune action disponible sur cette demande pour votre rôle à ce stade.
+          Aucune action disponible sur cette demande à ce stade.
         </p>
       </Card>
     );
@@ -94,7 +117,7 @@ export function TransitionPanel({
     }
     setError(null);
     startSubmit(async () => {
-      const result = await applyTransitionAction(reference, requestId, active, {
+      const result = await action(reference, requestId, active, {
         expectedStatus: currentStatus,
         note: note.trim() || undefined,
         assigneeId: ui.needsAssignee ? assigneeId : undefined,
@@ -114,7 +137,7 @@ export function TransitionPanel({
   return (
     <Card className="flex flex-col gap-4 p-5">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-        Actions
+        {title}
       </h2>
 
       {!active && (
@@ -162,7 +185,7 @@ export function TransitionPanel({
             </div>
           )}
 
-          {activeUi.allowsPriority && (
+          {activeUi.allowsPriority && systemPriority && (
             <div>
               <Label>Priorité (laisser inchangée ou ajuster)</Label>
               <select

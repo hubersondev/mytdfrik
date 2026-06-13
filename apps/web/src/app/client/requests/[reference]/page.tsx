@@ -6,10 +6,15 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { AttachmentPanel } from '@/components/attachment-panel/attachment-panel';
 import { MessageThread } from '@/components/message-thread/message-thread';
+import { BugDetailsCard } from '@/components/request/bug-details-card';
+import { EvaluationCard } from '@/components/request/evaluation-card';
+import { TransitionPanel } from '@/components/request/transition-panel';
 import { apiFetch, apiFetchOr, type ApiError } from '@/lib/api';
 import type { AttachmentView } from '@/lib/attachments';
+import type { BugDetailView, EvaluationView } from '@/lib/bug';
 import { getSession } from '@/lib/auth';
 import type { MessageView } from '@/lib/messages';
+import { applyTransitionAction, submitEvaluationAction } from './actions';
 import {
   IMPACT_OPTIONS,
   URGENCY_OPTIONS,
@@ -46,9 +51,12 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
     throw error;
   }
 
-  const [messages, attachments, session] = await Promise.all([
+  const [messages, attachments, bug, evaluation, transitionCodes, session] = await Promise.all([
     apiFetchOr<MessageView[]>(`/requests/${request.id}/messages`, []),
     apiFetchOr<AttachmentView[]>(`/requests/${request.id}/attachments`, []),
+    apiFetchOr<BugDetailView | null>(`/requests/${request.id}/bug-details`, null),
+    apiFetchOr<EvaluationView | null>(`/requests/${request.id}/evaluation`, null),
+    apiFetchOr<string[]>(`/requests/${request.id}/transitions`, []),
     getSession(),
   ]);
 
@@ -159,6 +167,27 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
           </div>
         </Card>
       </div>
+
+      <TransitionPanel
+        reference={request.publicReference}
+        requestId={request.id}
+        currentStatus={request.status}
+        codes={transitionCodes}
+        action={applyTransitionAction}
+        title="Que souhaitez-vous faire ?"
+      />
+
+      {request.status === 'CLOTUREE' && (
+        <EvaluationCard
+          reference={request.publicReference}
+          requestId={request.id}
+          evaluation={evaluation}
+          canSubmit
+          action={submitEvaluationAction}
+        />
+      )}
+
+      {bug && <BugDetailsCard bug={bug} />}
 
       <AttachmentPanel
         requestId={request.id}
