@@ -4,6 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
+import { RowActions } from '@/components/ui/row-actions';
+import { StatCard } from '@/components/ui/stat-card';
+import { StatusPill } from '@/components/ui/status-pill';
 import { paginate, resolvePageSize } from '@/lib/paginate';
 import { apiFetchOr } from '@/lib/api';
 import {
@@ -13,7 +16,7 @@ import {
   statusKeyFromQuery,
   type RoleRow,
 } from '@/lib/roles';
-import { RoleActionsMenu } from './_components/role-actions-menu';
+import { deleteRoleAction } from './actions';
 import { RolesToolbar } from './_components/roles-toolbar';
 
 export default async function AdminRolesPage({
@@ -41,6 +44,8 @@ export default async function AdminRolesPage({
   const all = await apiFetchOr<RoleRow[]>(`/roles${qs.toString() ? `?${qs.toString()}` : ''}`, []);
   const rows = applyClientSideView(all, { status, query });
   const { pageItems, safePage } = paginate(rows, Number(params.page) || 1, PAGE_SIZE);
+  const internalCount = all.filter((r) => r.scope === 'INTERNAL').length;
+  const clientCount = all.filter((r) => r.scope === 'CLIENT').length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,12 +74,19 @@ export default async function AdminRolesPage({
         </Button>
       </header>
 
+      <section className="grid grid-cols-3 gap-4">
+        <StatCard value={all.length} label="Rôles" />
+        <StatCard value={internalCount} label="Internes" tone="leaf" />
+        <StatCard value={clientCount} label="Clients" tone="amber" />
+      </section>
+
       {params.created && <SuccessBanner>Rôle créé.</SuccessBanner>}
       {params.updated && <SuccessBanner>Modifications enregistrées.</SuccessBanner>}
 
-      <RolesToolbar scope={scope} status={status} query={query} />
-
       <Card className="overflow-hidden">
+        <div className="border-b border-zinc-200/70 p-4 dark:border-zinc-800">
+          <RolesToolbar scope={scope} status={status} query={query} />
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -127,16 +139,16 @@ export default async function AdminRolesPage({
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {r.isActive ? (
-                      <Badge variant="success">Actif</Badge>
-                    ) : (
-                      <Badge variant="secondary">Inactif</Badge>
-                    )}
+                    <StatusPill active={r.isActive} />
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end">
-                      <RoleActionsMenu roleId={r.id} label={r.label} isSystem={r.isSystem} />
-                    </div>
+                  <td className="px-4 py-3">
+                    <RowActions
+                      editHref={`/admin/roles/${r.id}/edit`}
+                      label={r.label}
+                      deleteAction={r.isSystem ? undefined : deleteRoleAction}
+                      deleteId={r.id}
+                      deleteConfirm={`Supprimer le rôle « ${r.label} » ?`}
+                    />
                   </td>
                 </tr>
               ))}

@@ -4,6 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
+import { RowActions } from '@/components/ui/row-actions';
+import { StatCard } from '@/components/ui/stat-card';
+import { StatusPill } from '@/components/ui/status-pill';
 import { paginate, resolvePageSize } from '@/lib/paginate';
 import { apiFetchOr } from '@/lib/api';
 import {
@@ -14,7 +17,7 @@ import {
   type CountryRow,
   type CursorPage,
 } from '@/lib/geo';
-import { CityActionsMenu } from './_components/city-actions-menu';
+import { deleteCityAction } from './actions';
 import { CitiesToolbar } from './_components/cities-toolbar';
 
 function emptyPage<T>(): CursorPage<T> {
@@ -59,6 +62,7 @@ export default async function AdminCitiesPage({
     extraHaystack: (c) => c.country?.name ?? '',
   });
   const { pageItems, safePage } = paginate(rows, Number(params.page) || 1, PAGE_SIZE);
+  const total = citiesPage.items.length;
   const activeCount = citiesPage.items.filter((c) => c.isActive).length;
 
   return (
@@ -89,18 +93,25 @@ export default async function AdminCitiesPage({
         </Button>
       </header>
 
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <StatCard value={total} label="Villes" />
+        <StatCard value={activeCount} label="Actives" tone="leaf" />
+        <StatCard value={total - activeCount} label="Inactives" tone="zinc" />
+      </section>
+
       {params.created && <SuccessBanner>Ville créée.</SuccessBanner>}
       {params.updated && <SuccessBanner>Modifications enregistrées.</SuccessBanner>}
 
-      <CitiesToolbar
-        countries={countriesPage.items}
-        countryId={countryId}
-        status={status}
-        sort={sort}
-        query={query}
-      />
-
       <Card className="overflow-hidden">
+        <div className="border-b border-zinc-200/70 p-4 dark:border-zinc-800">
+          <CitiesToolbar
+            countries={countriesPage.items}
+            countryId={countryId}
+            status={status}
+            sort={sort}
+            query={query}
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -129,16 +140,16 @@ export default async function AdminCitiesPage({
                     {c.country?.name ?? '—'}
                   </td>
                   <td className="px-4 py-3">
-                    {c.isActive ? (
-                      <Badge variant="success">Active</Badge>
-                    ) : (
-                      <Badge variant="secondary">Inactive</Badge>
-                    )}
+                    <StatusPill active={c.isActive} activeLabel="Active" inactiveLabel="Inactive" />
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end">
-                      <CityActionsMenu cityId={c.id} name={c.name} />
-                    </div>
+                  <td className="px-4 py-3">
+                    <RowActions
+                      editHref={`/admin/cities/${c.id}/edit`}
+                      label={c.name}
+                      deleteAction={deleteCityAction}
+                      deleteId={c.id}
+                      deleteConfirm={`Supprimer la ville « ${c.name} » ?`}
+                    />
                   </td>
                 </tr>
               ))}
