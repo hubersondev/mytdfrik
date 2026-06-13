@@ -1,7 +1,8 @@
 'use client';
 
-import { Bell, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useTransition } from 'react';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, initials } from '@/components/ui/avatar';
 import {
@@ -18,9 +19,11 @@ import { logoutAction } from '../../admin/actions';
 interface TopBarProps {
   user: { firstName: string; lastName: string; email: string; roleId: string };
   theme: 'light' | 'dark';
+  wsToken: string;
+  initialUnread: number;
 }
 
-export function ClientTopBar({ user, theme }: TopBarProps) {
+export function ClientTopBar({ user, theme, wsToken, initialUnread }: TopBarProps) {
   const [loggingOut, startLogout] = useTransition();
 
   return (
@@ -35,13 +38,7 @@ export function ClientTopBar({ user, theme }: TopBarProps) {
       <div className="ml-auto flex items-center gap-2">
         <ThemeToggle current={theme} />
 
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
-        >
-          <Bell className="h-4 w-4" />
-        </button>
+        <NotificationBell portal="client" wsToken={wsToken} initialUnread={initialUnread} />
 
         <Separator orientation="vertical" className="h-6" />
 
