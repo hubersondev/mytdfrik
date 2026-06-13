@@ -1,315 +1,277 @@
 import {
-  ArrowUpRight,
-  Boxes,
+  AlertTriangle,
   CheckCircle2,
+  Clock,
   Download,
-  Plus,
-  ShieldCheck,
-  Sparkles,
-  Tags,
+  LayoutDashboard,
+  Loader2,
+  Star,
   Users,
-  type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Badge, priorityVariant } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { apiFetchOr } from '@/lib/api';
+import { formatMinutes, type OperationalMetrics, type StrategicMetrics } from '@/lib/metrics';
+import { priorityLabel, type PriorityCode } from '@/lib/requests';
 
-interface CursorPage<T> {
-  items: T[];
-  page_info: { has_next: boolean; next_cursor: string | null };
-}
+export const metadata = { title: 'Tableau de bord · MyTDFRIK' };
 
-interface CategoryRow {
-  id: string;
-  code: string;
-  label: string;
-  defaultPriorityId: 'P0' | 'P1' | 'P2' | 'P3' | 'P4';
-  isActive: boolean;
-}
-interface ProductRow {
-  id: string;
-  code: string;
-  label: string;
-  isActive: boolean;
-}
-interface UserRow {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  roleId: string;
-  isActive: boolean;
-  lastLoginAt: string | null;
-  createdAt: string;
-}
-interface PriorityLevelRow {
-  id: 'P0' | 'P1' | 'P2' | 'P3' | 'P4';
-  label: string;
-  slaFirstResponseMinutes: number;
-  slaResolutionMinutes: number;
-  is24x7: boolean;
+const PERIODS = [
+  { days: 30, label: '30 jours' },
+  { days: 90, label: '90 jours' },
+  { days: 365, label: '12 mois' },
+] as const;
+
+interface PageProps {
+  searchParams: Promise<{ period?: string }>;
 }
 
-export default async function AdminDashboard() {
-  const [categories, products, users, priorities] = await Promise.all([
-    apiFetchOr<CursorPage<CategoryRow>>('/categories?limit=100', emptyPage<CategoryRow>()),
-    apiFetchOr<CursorPage<ProductRow>>('/products?limit=100', emptyPage<ProductRow>()),
-    apiFetchOr<CursorPage<UserRow>>('/users?limit=100', emptyPage<UserRow>()),
-    apiFetchOr<PriorityLevelRow[]>('/priority-levels', []),
+export default async function AdminDashboardPage({ searchParams }: PageProps) {
+  const { period } = await searchParams;
+  const days = PERIODS.some((p) => String(p.days) === period) ? Number(period) : 30;
+  const to = new Date();
+  const from = new Date(to.getTime() - days * 86_400_000);
+  const qs = `from=${from.toISOString()}&to=${to.toISOString()}`;
+
+  const [op, strat] = await Promise.all([
+    apiFetchOr<OperationalMetrics | null>('/metrics/operational', null),
+    apiFetchOr<StrategicMetrics | null>(`/metrics/strategic?${qs}`, null),
   ]);
 
-  const stats = [
-    {
-      label: 'Catégories',
-      value: categories.items.length,
-      sub: `${activeCount(categories.items)} actives`,
-      icon: Tags,
-      href: '/admin/categories',
-      tone: 'brand' as const,
-    },
-    {
-      label: 'Produits',
-      value: products.items.length,
-      sub: `${activeCount(products.items)} actifs`,
-      icon: Boxes,
-      href: '/admin/categories',
-      tone: 'leaf' as const,
-    },
-    {
-      label: 'Utilisateurs',
-      value: users.items.length,
-      sub: `${activeCount(users.items)} actifs`,
-      icon: Users,
-      href: '/admin/users',
-      tone: 'sand' as const,
-    },
-    {
-      label: 'Priorités',
-      value: priorities.length,
-      sub: priorities.some((p) => p.is24x7) ? 'P0 en 24/7' : 'paramétrables',
-      icon: Sparkles,
-      href: '/admin/categories',
-      tone: 'zinc' as const,
-    },
-  ];
-
-  const topCategories = [...categories.items]
-    .sort((a, b) => a.defaultPriorityId.localeCompare(b.defaultPriorityId))
-    .slice(0, 5);
-
-  const recentUsers = [...users.items]
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, 5);
-
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-leaf-700 dark:text-leaf-400">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Administration
+            <LayoutDashboard className="h-3.5 w-3.5" />
+            Tableau de bord
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Paramétrage de la plateforme
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Pilotage de l&apos;activité
           </h1>
-          <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-            Utilisateurs, droits d&apos;accès, catégories de demandes et règles métier.
-          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4" />
-            Audit log
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/admin/users/new">
-              <Plus className="h-4 w-4" />
-              Nouvel utilisateur
-            </Link>
-          </Button>
+        <div className="flex items-center gap-1 rounded-lg border border-zinc-200 p-1 dark:border-zinc-800">
+          {PERIODS.map((p) => {
+            const active = p.days === days;
+            return (
+              <Link
+                key={p.days}
+                href={`/admin?period=${p.days}`}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  active
+                    ? 'bg-leaf-700 text-white dark:bg-leaf-600'
+                    : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+                }`}
+              >
+                {p.label}
+              </Link>
+            );
+          })}
         </div>
       </header>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <StatTile
-            key={stat.label}
-            label={stat.label}
-            value={stat.value}
-            sub={stat.sub}
-            icon={stat.icon}
-            href={stat.href}
-            tone={stat.tone}
-          />
-        ))}
+      {/* Compteurs opérationnels (CDC §3.11.1 [EXG-03-091]) */}
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Counter label="En cours" value={op?.enCours ?? 0} icon={Loader2} tone="leaf" />
+        <Counter
+          label="En attente client"
+          value={op?.enAttenteClient ?? 0}
+          icon={Clock}
+          tone="amber"
+        />
+        <Counter
+          label="En retard SLA"
+          value={op?.enRetardSla ?? 0}
+          icon={AlertTriangle}
+          tone="rose"
+        />
+        <Counter label="À clôturer" value={op?.aCloturer ?? 0} icon={CheckCircle2} tone="zinc" />
       </section>
 
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Charge par responsable (CDC §3.11.1 [EXG-03-092]) */}
+        <Card className="lg:col-span-1">
+          <div className="flex items-center gap-2 p-5 pb-3">
+            <Users className="h-4 w-4 text-zinc-400" />
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Charge par responsable
+            </h2>
+          </div>
+          <Separator />
+          <ul className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
+            {(op?.chargeResponsables ?? []).map((r) => (
+              <li key={r.userId} className="flex items-center justify-between px-5 py-3">
+                <span className="truncate text-sm text-zinc-800 dark:text-zinc-200">{r.name}</span>
+                <span className="flex items-center gap-2 text-xs">
+                  <Badge variant="leaf">{r.actives} actives</Badge>
+                  <span className="text-zinc-400">{r.resolues} résolues</span>
+                </span>
+              </li>
+            ))}
+            {(op?.chargeResponsables ?? []).length === 0 && (
+              <li className="px-5 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                Aucune demande affectée.
+              </li>
+            )}
+          </ul>
+        </Card>
+
+        {/* Indicateurs stratégiques (CDC §3.11.2 [EXG-03-100]) */}
         <Card className="lg:col-span-2">
-          <div className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                Catégories prioritaires
-              </p>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Top 5 par priorité par défaut · CDC annexe A3
-              </p>
-            </div>
+          <div className="flex items-center justify-between p-5 pb-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Indicateurs · {PERIODS.find((p) => p.days === days)?.label}
+            </h2>
             <Link
-              href="/admin/categories"
-              className="flex items-center gap-1 text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              href={`/admin/metrics/export?${qs}`}
+              prefetch={false}
+              className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
-              Voir tout
-              <ArrowUpRight className="h-3.5 w-3.5" />
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
             </Link>
           </div>
           <Separator />
-          <ul className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
-            {topCategories.map((c) => (
-              <li key={c.id} className="flex items-center gap-3 px-5 py-3 text-sm">
-                <Badge variant={priorityVariant(c.defaultPriorityId)}>{c.defaultPriorityId}</Badge>
-                <span className="flex-1 truncate text-zinc-900 dark:text-zinc-100">{c.label}</span>
-                <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{c.code}</span>
-              </li>
-            ))}
-            {topCategories.length === 0 && (
-              <li className="px-5 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                Aucune catégorie configurée.
-              </li>
-            )}
-          </ul>
+          <dl className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-3">
+            <Stat label="Demandes reçues" value={strat?.volume.recues ?? 0} />
+            <Stat label="Résolues" value={strat?.volume.resolues ?? 0} />
+            <Stat label="Clôturées" value={strat?.volume.cloturees ?? 0} />
+            <Stat
+              label="Délai prise en charge"
+              value={formatMinutes(strat?.delaisMoyens.priseEnChargeMinutes ?? null)}
+            />
+            <Stat
+              label="Délai résolution"
+              value={formatMinutes(strat?.delaisMoyens.resolutionMinutes ?? null)}
+            />
+            <Stat
+              label="Satisfaction"
+              value={
+                strat?.tauxSatisfaction != null ? (
+                  <span className="inline-flex items-center gap-1">
+                    {strat.tauxSatisfaction}
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    <span className="text-xs text-zinc-400">({strat.nbEvaluations})</span>
+                  </span>
+                ) : (
+                  '—'
+                )
+              }
+            />
+            <Stat
+              label="Taux de réouverture"
+              value={strat?.tauxReouverture != null ? `${strat.tauxReouverture} %` : '—'}
+            />
+          </dl>
         </Card>
+      </div>
 
-        <Card>
-          <div className="flex items-center justify-between p-5">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                Comptes récents
-              </p>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Derniers utilisateurs créés
-              </p>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <DistributionCard title="Top catégories">
+          {(strat?.distributionParCategorie ?? []).map((c) => (
+            <Row key={c.code} label={c.label} value={c.count} />
+          ))}
+          {(strat?.distributionParCategorie ?? []).length === 0 && <Empty />}
+        </DistributionCard>
+
+        <DistributionCard title="Par priorité">
+          {(strat?.distributionParPriorite ?? []).map((p) => (
+            <div
+              key={p.priorityId}
+              className="flex items-center justify-between px-5 py-2.5 text-sm"
+            >
+              <Badge variant={priorityVariant(p.priorityId as PriorityCode)}>
+                {priorityLabel(p.priorityId as PriorityCode)}
+              </Badge>
+              <span className="font-medium text-zinc-900 dark:text-zinc-100">{p.count}</span>
             </div>
-          </div>
-          <Separator />
-          <ul className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
-            {recentUsers.map((u) => (
-              <li key={u.id} className="px-5 py-3 text-sm">
-                <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                  {u.firstName} {u.lastName}
-                </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">{u.email}</p>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <Badge variant="outline">{u.roleId}</Badge>
-                  {u.isActive ? (
-                    <Badge variant="success">Actif</Badge>
-                  ) : (
-                    <Badge variant="secondary">Inactif</Badge>
-                  )}
-                </div>
-              </li>
-            ))}
-            {recentUsers.length === 0 && (
-              <li className="px-5 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                Aucun utilisateur.
-              </li>
-            )}
-          </ul>
-        </Card>
-      </section>
+          ))}
+          {(strat?.distributionParPriorite ?? []).length === 0 && <Empty />}
+        </DistributionCard>
 
-      <Card>
-        <div className="flex items-center gap-2 p-5">
-          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-            État du Sprint 2 — Catalogue &amp; Administration
-          </p>
-        </div>
-        <Separator />
-        <ul className="space-y-1.5 px-5 py-4 text-sm text-zinc-700 dark:text-zinc-300">
-          <ChecklistItem checked>14 catégories du CDC annexe A3 seedées</ChecklistItem>
-          <ChecklistItem checked>5 niveaux de priorité paramétrables (SLA)</ChecklistItem>
-          <ChecklistItem checked>
-            CRUD complet exposé via API (Categories, Products, Users, Organizations)
-          </ChecklistItem>
-          <ChecklistItem checked>RBAC appliqué : ADMIN requis pour les écritures</ChecklistItem>
-          <ChecklistItem>
-            Formulaires CRUD côté frontend — arrivent dans les sprints suivants
-          </ChecklistItem>
-        </ul>
-      </Card>
+        <DistributionCard title="Bugs par produit">
+          {(strat?.bugsParProduit ?? []).map((b) => (
+            <Row key={b.code} label={b.label} value={`${b.total} (${b.reproduits} reprod.)`} />
+          ))}
+          {(strat?.bugsParProduit ?? []).length === 0 && <Empty />}
+        </DistributionCard>
+      </div>
     </div>
   );
 }
 
-type Tone = 'brand' | 'leaf' | 'sand' | 'zinc';
-
-const TILE_TONE_ICON: Record<Tone, string> = {
-  leaf: 'bg-leaf-50 text-leaf-700 dark:bg-leaf-950/60 dark:text-leaf-300',
-  brand: 'bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300',
-  sand: 'bg-sand-100 text-sand-800 dark:bg-sand-950/60 dark:text-sand-300',
-  zinc: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
-};
-
-function StatTile({
+function Counter({
   label,
   value,
-  sub,
   icon: Icon,
-  href,
   tone,
 }: {
   label: string;
   value: number;
-  sub: string;
-  icon: LucideIcon;
-  href: string;
-  tone: Tone;
+  icon: typeof Clock;
+  tone: 'leaf' | 'amber' | 'rose' | 'zinc';
 }) {
+  const toneClass = {
+    leaf: 'text-leaf-700 dark:text-leaf-400',
+    amber: 'text-amber-600 dark:text-amber-400',
+    rose: 'text-rose-600 dark:text-rose-400',
+    zinc: 'text-zinc-500 dark:text-zinc-400',
+  }[tone];
   return (
-    <Link href={href} className="group">
-      <Card className="h-full bg-white transition-colors group-hover:border-leaf-300 dark:bg-zinc-900/50 dark:group-hover:border-leaf-800">
-        <div className="flex h-full flex-col gap-3 p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              {label}
-            </p>
-            <span className={`grid h-8 w-8 place-items-center rounded-lg ${TILE_TONE_ICON[tone]}`}>
-              <Icon className="h-4 w-4" />
-            </span>
-          </div>
-          <p className="text-4xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-            {value}
-          </p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{sub}</p>
-        </div>
-      </Card>
-    </Link>
+    <Card className="p-5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          {label}
+        </span>
+        <Icon className={`h-4 w-4 ${toneClass}`} />
+      </div>
+      <p className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+        {value}
+      </p>
+    </Card>
   );
 }
 
-function ChecklistItem({ checked, children }: { checked?: boolean; children: React.ReactNode }) {
+function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <li className="flex items-start gap-2.5">
-      <span
-        className={
-          checked
-            ? 'mt-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500'
-            : 'mt-1 inline-block h-1.5 w-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700'
-        }
-      />
-      <span className={checked ? '' : 'text-zinc-500 dark:text-zinc-400'}>{children}</span>
-    </li>
+    <div>
+      <dt className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+        {label}
+      </dt>
+      <dd className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">{value}</dd>
+    </div>
   );
 }
 
-function activeCount(items: { isActive: boolean }[]): number {
-  return items.filter((i) => i.isActive).length;
+function DistributionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Card>
+      <div className="p-5 pb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          {title}
+        </h2>
+      </div>
+      <Separator />
+      <div className="divide-y divide-zinc-200/80 dark:divide-zinc-800">{children}</div>
+    </Card>
+  );
 }
 
-function emptyPage<T>(): CursorPage<T> {
-  return { items: [], page_info: { has_next: false, next_cursor: null } };
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between px-5 py-2.5 text-sm">
+      <span className="truncate text-zinc-700 dark:text-zinc-300">{label}</span>
+      <span className="font-medium text-zinc-900 dark:text-zinc-100">{value}</span>
+    </div>
+  );
+}
+
+function Empty() {
+  return (
+    <p className="px-5 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
+      Aucune donnée sur la période.
+    </p>
+  );
 }
