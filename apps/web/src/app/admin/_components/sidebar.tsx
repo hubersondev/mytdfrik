@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   PanelLeftClose,
   PanelLeftOpen,
-  Settings,
   Shield,
   Sparkles,
   Tags,
@@ -36,20 +35,19 @@ const NAV_ADMIN: NavItem[] = [
   { label: 'Utilisateurs', href: '/admin/users', icon: Users },
   { label: 'Organisations', href: '/admin/organizations', icon: Building2 },
   { label: 'Demandes', href: '/admin/requests', icon: TicketCheck },
-  { label: 'Bugs', href: '/admin/bugs', icon: Bug, badge: 'S7' },
+  { label: 'Bugs', href: '/admin/bugs', icon: Bug },
 ];
 
 const NAV_CONFIG: NavItem[] = [
   { label: 'Catégories', href: '/admin/categories', icon: Tags },
-  { label: 'Produits', href: '/admin/products', icon: Boxes, badge: 'S3' },
-  { label: 'Priorités', href: '/admin/priorities', icon: Sparkles, badge: 'S3' },
+  { label: 'Produits', href: '/admin/products', icon: Boxes },
+  { label: 'Priorités', href: '/admin/priorities', icon: Sparkles },
   { label: 'Pays', href: '/admin/countries', icon: Globe },
   { label: 'Villes', href: '/admin/cities', icon: Building },
 ];
 
 const NAV_SYSTEM: NavItem[] = [
   { label: 'Rôles & permissions', href: '/admin/roles', icon: Shield },
-  { label: 'Paramètres', href: '/admin/settings', icon: Settings, badge: 'S3' },
 ];
 
 interface SidebarProps {
