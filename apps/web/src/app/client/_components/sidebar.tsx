@@ -33,7 +33,7 @@ const NAV_PRIMARY: NavItem[] = [
 
 const NAV_SECONDARY: NavItem[] = [
   { label: 'Notifications', href: '/client/notifications', icon: Bell },
-  { label: "Centre d'aide", href: '/client/help', icon: LifeBuoy, badge: 'S9' },
+  { label: "Centre d'aide", href: '/client/help', icon: LifeBuoy },
 ];
 
 interface SidebarProps {
