@@ -132,13 +132,14 @@ export function GlobalSearch() {
   const term = query.trim();
 
   return (
-    <>
-      {/* Déclencheur — calque le rendu de l'ancien champ de recherche. */}
+    <div className="relative mx-auto hidden w-full max-w-md md:block">
+      {/* Déclencheur — calque le rendu du champ de recherche ; reste monté pour
+          stabiliser la hauteur de la rangée quand la palette s'ouvre par-dessus. */}
       <button
         type="button"
         onClick={openPalette}
         aria-label="Ouvrir la recherche globale"
-        className="relative mx-auto hidden h-9 w-full max-w-md items-center gap-2 rounded-md border border-zinc-200 bg-white pl-9 pr-2 text-left text-sm text-zinc-400 transition-colors hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 md:flex"
+        className="relative flex h-9 w-full items-center gap-2 rounded-md border border-zinc-200 bg-white pl-9 pr-2 text-left text-sm text-zinc-400 transition-colors hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:bg-zinc-800"
       >
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
         <span className="flex-1 truncate">Rechercher un ticket, un utilisateur…</span>
@@ -148,25 +149,27 @@ export function GlobalSearch() {
       </button>
 
       {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-900/40 px-4 pt-[12vh] backdrop-blur-sm"
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
-          }}
-        >
+        <>
+          {/* Voile plein écran — ferme la palette au clic en dehors. */}
+          <div
+            className="fixed inset-0 z-40 bg-zinc-900/20 backdrop-blur-[1px]"
+            role="presentation"
+            onMouseDown={() => setOpen(false)}
+          />
+
+          {/* Panneau ancré : même largeur que la barre, déployé vers le bas. */}
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Recherche globale"
-            className="w-full max-w-xl overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-soft-lg dark:border-zinc-800 dark:bg-zinc-950"
+            className="absolute left-0 right-0 top-0 z-50 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-soft-lg dark:border-zinc-800 dark:bg-zinc-950"
           >
-            {/* Champ de saisie */}
-            <div className="flex items-center gap-3 border-b border-zinc-200 px-4 dark:border-zinc-800">
+            {/* Champ de saisie — aligné sur la barre (même icône à gauche). */}
+            <div className="flex items-center gap-2.5 border-b border-zinc-200 pl-3 pr-2 dark:border-zinc-800">
               {loading ? (
-                <Loader2 className="h-5 w-5 shrink-0 animate-spin text-leaf-600 dark:text-leaf-400" />
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-leaf-600 dark:text-leaf-400" />
               ) : (
-                <Search className="h-5 w-5 shrink-0 text-zinc-400 dark:text-zinc-500" />
+                <Search className="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" />
               )}
               <input
                 autoFocus
@@ -179,7 +182,7 @@ export function GlobalSearch() {
                 aria-expanded="true"
                 aria-controls={listboxId}
                 aria-autocomplete="list"
-                className="h-14 w-full bg-transparent text-sm text-zinc-900 placeholder:text-zinc-400 focus-visible:outline-none dark:text-zinc-50 dark:placeholder:text-zinc-500"
+                className="h-11 w-full bg-transparent text-sm text-zinc-900 placeholder:text-zinc-400 focus-visible:outline-none dark:text-zinc-50 dark:placeholder:text-zinc-500"
               />
               <kbd className="pointer-events-none hidden select-none rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 sm:inline-block">
                 Échap
@@ -214,9 +217,9 @@ export function GlobalSearch() {
               <span>↑ ↓ pour naviguer</span>
             </div>
           </div>
-        </div>
+        </>
       ) : null}
-    </>
+    </div>
   );
 }
 
