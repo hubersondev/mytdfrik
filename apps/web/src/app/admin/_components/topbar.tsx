@@ -3,8 +3,10 @@
 import { LogOut, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useTransition } from 'react';
+import { MobileNav } from '@/components/mobile-nav';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { GlobalSearch } from '@/components/search/global-search';
+import { ADMIN_NAV } from './nav';
 import { Avatar, AvatarFallback, initials } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -29,7 +31,10 @@ export function TopBar({ user, theme, wsToken, initialUnread }: TopBarProps) {
   const [loggingOut, startLogout] = useTransition();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-zinc-200/70 bg-white/80 px-6 backdrop-blur-md dark:border-zinc-800/70 dark:bg-zinc-950/70">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-zinc-200/70 bg-white/80 px-4 backdrop-blur-md dark:border-zinc-800/70 dark:bg-zinc-950/70 sm:px-6">
+      {/* Menu mobile (sidebar masquée sous lg) */}
+      <MobileNav sections={ADMIN_NAV} subtitle="Administration" rootHref="/admin" />
+
       {/* Recherche globale (palette ⌘K) — demandes / utilisateurs / catalogue */}
       <GlobalSearch />
 
