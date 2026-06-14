@@ -21,6 +21,8 @@ function toPayload(data: OrganizationFormInput) {
     countryId: data.countryId ? data.countryId : undefined,
     cityId: data.cityId ? data.cityId : undefined,
     primaryContactEmail: data.primaryContactEmail ? data.primaryContactEmail : undefined,
+    // `null` (et non `undefined`) pour permettre de retirer le responsable en édition.
+    defaultAssigneeUserId: data.defaultAssigneeUserId ? data.defaultAssigneeUserId : null,
     isActive: data.isActive,
   };
 }

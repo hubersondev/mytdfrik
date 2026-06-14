@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { CityRow, CountryRow } from '@/lib/geo';
+import type { AssigneeOption } from '@/lib/organizations';
 import { cn } from '@/lib/utils';
 import {
   createOrganizationAction,
@@ -23,6 +24,8 @@ interface Props {
   /** Référentiels chargés côté serveur et passés au formulaire. */
   countries: CountryRow[];
   cities: CityRow[];
+  /** Responsables éligibles (ADMIN/RESPONSABLE actifs) pour l'affectation directe. */
+  assignees: AssigneeOption[];
   /** Identifiant requis en mode édition. */
   organizationId?: string;
   defaultValues?: Partial<OrganizationFormInput>;
@@ -35,6 +38,7 @@ export function OrganizationForm({
   mode,
   countries,
   cities,
+  assignees,
   organizationId,
   defaultValues,
 }: Props) {
@@ -51,6 +55,7 @@ export function OrganizationForm({
       countryId: defaultValues?.countryId ?? '',
       cityId: defaultValues?.cityId ?? '',
       primaryContactEmail: defaultValues?.primaryContactEmail ?? '',
+      defaultAssigneeUserId: defaultValues?.defaultAssigneeUserId ?? '',
       isActive: defaultValues?.isActive ?? true,
     },
   });
@@ -170,6 +175,26 @@ export function OrganizationForm({
             )}
           </Field>
         </div>
+
+        <Field
+          label="Responsable par défaut (optionnel)"
+          error={form.formState.errors.defaultAssigneeUserId?.message}
+        >
+          <select className={FIELD_CLASS} {...form.register('defaultAssigneeUserId')}>
+            <option value="">— Aucun (qualification manuelle) —</option>
+            {assignees.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+            Si défini, toute nouvelle demande de cette organisation lui est affectée automatiquement
+            (statut « Affectée »), sans tri manuel.
+            {assignees.length === 0 &&
+              ' Aucun administrateur ou responsable actif disponible pour le moment.'}
+          </p>
+        </Field>
 
         <label className="flex items-center gap-2.5 text-sm text-zinc-700 dark:text-zinc-300">
           <input

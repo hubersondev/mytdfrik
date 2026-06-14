@@ -68,6 +68,18 @@ export class Organization {
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive!: boolean;
 
+  /**
+   * Responsable par défaut (optionnel) : utilisateur interne (ADMIN ou
+   * RESPONSABLE) à qui les nouvelles demandes de cette organisation sont
+   * affectées automatiquement à la création (affectation directe).
+   */
+  @Column({ name: 'default_assignee_user_id', type: 'uuid', nullable: true })
+  defaultAssigneeUserId!: string | null;
+
+  @ManyToOne(() => User, { eager: false, nullable: true })
+  @JoinColumn({ name: 'default_assignee_user_id' })
+  defaultAssignee!: User | null;
+
   @OneToMany(() => User, (user) => user.organization)
   users!: User[];
 

@@ -1,5 +1,6 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import {
+  Allow,
   IsBoolean,
   IsEmail,
   IsOptional,
@@ -7,6 +8,7 @@ import {
   IsUUID,
   Length,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateOrganizationDto {
@@ -50,6 +52,23 @@ export class CreateOrganizationDto {
   @IsEmail()
   @MaxLength(254)
   primaryContactEmail?: string;
+
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    format: 'uuid',
+    description:
+      'Responsable par défaut (utilisateur interne ADMIN ou RESPONSABLE) ' +
+      'à qui les nouvelles demandes de cette organisation sont affectées ' +
+      'automatiquement. `null` pour retirer le responsable.',
+  })
+  // @Allow() empêche le whitelist de retirer la valeur `null` (clé pour
+  // permettre de *retirer* le responsable) ; @ValidateIf saute la validation
+  // UUID quand la valeur est null/undefined.
+  @Allow()
+  @ValidateIf((_o, value) => value !== null && value !== undefined)
+  @IsUUID()
+  defaultAssigneeUserId?: string | null;
 
   @ApiProperty({ required: false, default: true })
   @IsOptional()

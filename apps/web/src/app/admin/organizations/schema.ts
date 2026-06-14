@@ -42,6 +42,11 @@ export const organizationFormSchema = z
       .max(254, { message: "L'adresse e-mail est limitée à 254 caractères." })
       .optional()
       .or(z.literal('')),
+    defaultAssigneeUserId: z
+      .string()
+      .uuid({ message: 'Sélectionnez un responsable valide.' })
+      .optional()
+      .or(z.literal('')),
     isActive: z.boolean(),
   })
   .refine((data) => !data.cityId || Boolean(data.countryId), {
