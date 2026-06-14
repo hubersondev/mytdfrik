@@ -14,8 +14,11 @@ import { decodeCursor, encodeCursor } from '../common/cursor.util';
 import type { CursorPage } from '../common/dto/pagination.dto';
 import {
   Category,
+  Organization,
+  PriorityLevel,
   REQUEST_STATUS_VALUES,
   Request,
+  RequestStateHistory,
   User,
 } from '../database/entities';
 import type { RequestStatus, RoleScope } from '../database/entities';
@@ -24,6 +27,7 @@ import { BugDetailsService } from './bug-details.service';
 import type { CreateRequestDto } from './dto/create-request.dto';
 import type { SortKey } from './dto/list-requests.dto';
 import { computeSystemPriority } from './priority-matrix';
+import { computeDeadlines, shiftResolutionForWaiting } from './sla';
 import {
   formatLocalDateTime,
   priorityLabel,
@@ -137,6 +141,11 @@ export class RequestsService {
           dto.bugDetails,
         );
       }
+
+      // Affectation directe si l'organisation a un responsable par défaut :
+      // qualification + affectation automatiques (statut → AFFECTEE).
+      await this.autoAssignToOrgDefault(manager, saved);
+
       return saved;
     });
 
@@ -146,6 +155,15 @@ export class RequestsService {
       requestId: created.id,
       actorUserId: viewer.id,
     });
+
+    // Affectation directe : prévient aussi le responsable désigné (CDC §7).
+    if (created.assignedToUserId) {
+      this.events.emit(NOTIFY_EVENT, {
+        eventCode: 'DEMANDE_AFFECTEE',
+        requestId: created.id,
+        actorUserId: null,
+      });
+    }
 
     // Envoi best-effort de l'accusé de réception (CDC §7.6, annexe A4).
     // Échec d'envoi ne casse pas la création — la retry queue arrive au S8.
@@ -157,6 +175,107 @@ export class RequestsService {
     });
 
     return created;
+  }
+
+  /**
+   * Affectation directe à la création : si l'organisation de la demande déclare
+   * un responsable par défaut (utilisateur interne ADMIN/RESPONSABLE actif),
+   * la demande est qualifiée puis affectée automatiquement — elle passe de
+   * NOUVELLE à AFFECTEE sans tri manuel du Gestionnaire. L'historique consigne
+   * les transitions T02 (qualification) et T06 (affectation) en acteur système.
+   *
+   * Robustesse : un responsable invalide (désactivé/supprimé) ne fait pas
+   * échouer la création ; la demande reste simplement en file de qualification.
+   */
+  private async autoAssignToOrgDefault(
+    manager: import('typeorm').EntityManager,
+    req: Request,
+  ): Promise<void> {
+    const org = await manager.getRepository(Organization).findOne({
+      where: { id: req.organizationId },
+    });
+    if (!org?.defaultAssigneeUserId) return;
+
+    const assignee = await manager.getRepository(User).findOne({
+      where: { id: org.defaultAssigneeUserId, deletedAt: IsNull() },
+      relations: { role: true },
+    });
+    if (
+      !assignee ||
+      !assignee.isActive ||
+      !assignee.role ||
+      assignee.role.scope !== 'INTERNAL' ||
+      !['ADMIN', 'RESPONSABLE'].includes(assignee.roleId)
+    ) {
+      this.logger.warn(
+        `Responsable par défaut invalide pour l'organisation ${org.id} — ` +
+          `demande ${req.publicReference} laissée en file de qualification.`,
+      );
+      return;
+    }
+
+    const now = new Date();
+
+    // Effets de qualification (équivalent T02), acteur système.
+    req.qualifiedByUserId = null;
+    req.qualifiedAt = now;
+    req.effectivePriorityId = req.systemPriorityId;
+    await this.setSlaDeadlines(manager, req, req.createdAt ?? now);
+    req.isSlaFirstResponseRespected =
+      req.slaDueFirstResponseAt !== null
+        ? now.getTime() <= req.slaDueFirstResponseAt.getTime()
+        : null;
+
+    // Effets d'affectation (équivalent T06), acteur système.
+    req.assignedToUserId = assignee.id;
+    req.assignedByUserId = null;
+    req.status = 'AFFECTEE';
+    await manager.getRepository(Request).save(req);
+
+    // Historique append-only : T02 puis T06 (acteur système = null).
+    const history = manager.getRepository(RequestStateHistory);
+    await history.insert({
+      requestId: req.id,
+      transitionCode: 'T02',
+      fromStatus: 'NOUVELLE',
+      toStatus: 'EN_ATTENTE_AFFECTATION',
+      actorUserId: null,
+      note: "Qualification automatique (responsable par défaut de l'organisation).",
+      event: 'DEMANDE_QUALIFIEE',
+    });
+    await history.insert({
+      requestId: req.id,
+      transitionCode: 'T06',
+      fromStatus: 'EN_ATTENTE_AFFECTATION',
+      toStatus: 'AFFECTEE',
+      actorUserId: null,
+      note: "Affectation automatique au responsable par défaut de l'organisation.",
+      event: 'DEMANDE_AFFECTEE',
+    });
+  }
+
+  /** Calcule et pose les échéances SLA depuis une date de référence (CDC §5.8). */
+  private async setSlaDeadlines(
+    manager: import('typeorm').EntityManager,
+    req: Request,
+    from: Date,
+  ): Promise<void> {
+    const level = await manager.getRepository(PriorityLevel).findOne({
+      where: { id: req.effectivePriorityId },
+    });
+    if (!level) return;
+    const deadlines = computeDeadlines(from, {
+      slaFirstResponseMinutes: level.slaFirstResponseMinutes,
+      slaResolutionMinutes: level.slaResolutionMinutes,
+      is24x7: level.is24x7,
+    });
+    req.slaDueFirstResponseAt = deadlines.firstResponseDueAt;
+    const waitingMs = Number(req.waitingClientTotalMs ?? 0);
+    req.slaDueResolutionAt = shiftResolutionForWaiting(
+      deadlines.resolutionDueAt,
+      waitingMs,
+      level.is24x7,
+    );
   }
 
   private async sendAcknowledgement(requestId: string): Promise<void> {

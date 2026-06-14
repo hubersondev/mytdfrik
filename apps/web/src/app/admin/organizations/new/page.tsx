@@ -1,6 +1,7 @@
 import { ArrowLeft, Building2 } from 'lucide-react';
 import Link from 'next/link';
 import { apiFetchOr } from '@/lib/api';
+import { fetchAssigneeOptions } from '@/lib/assignee-options';
 import type { CityRow, CountryRow, CursorPage } from '@/lib/geo';
 
 import { OrganizationForm } from '../_components/organization-form';
@@ -10,12 +11,13 @@ function emptyPage<T>(): CursorPage<T> {
 }
 
 export default async function NewOrganizationPage() {
-  const [countries, cities] = await Promise.all([
+  const [countries, cities, assignees] = await Promise.all([
     apiFetchOr<CursorPage<CountryRow>>(
       '/countries?limit=100&active_only=true',
       emptyPage<CountryRow>(),
     ),
     apiFetchOr<CursorPage<CityRow>>('/cities?limit=100', emptyPage<CityRow>()),
+    fetchAssigneeOptions(),
   ]);
 
   return (
@@ -43,7 +45,12 @@ export default async function NewOrganizationPage() {
         </div>
       </div>
 
-      <OrganizationForm mode="create" countries={countries.items} cities={cities.items} />
+      <OrganizationForm
+        mode="create"
+        countries={countries.items}
+        cities={cities.items}
+        assignees={assignees}
+      />
     </div>
   );
 }

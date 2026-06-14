@@ -19,9 +19,23 @@ export interface OrganizationRow {
   country: { id: string; code: string; name: string } | null;
   city: { id: string; name: string } | null;
   primaryContactEmail: string | null;
+  /** Responsable par défaut (affectation directe des nouvelles demandes). */
+  defaultAssigneeUserId: string | null;
+  defaultAssignee: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    roleId: string;
+  } | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Option de sélection d'un responsable par défaut (utilisateur interne). */
+export interface AssigneeOption {
+  id: string;
+  label: string;
 }
 
 export interface CursorPage<T> {

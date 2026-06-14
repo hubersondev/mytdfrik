@@ -2,6 +2,7 @@ import { ArrowLeft, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { apiFetch, apiFetchOr } from '@/lib/api';
+import { fetchAssigneeOptions } from '@/lib/assignee-options';
 import type { CityRow, CountryRow, CursorPage } from '@/lib/geo';
 import type { OrganizationRow } from '@/lib/organizations';
 import { OrganizationForm } from '../../_components/organization-form';
@@ -25,12 +26,13 @@ export default async function EditOrganizationPage({
     throw error;
   }
 
-  const [countries, cities] = await Promise.all([
+  const [countries, cities, assignees] = await Promise.all([
     apiFetchOr<CursorPage<CountryRow>>(
       '/countries?limit=100&active_only=true',
       emptyPage<CountryRow>(),
     ),
     apiFetchOr<CursorPage<CityRow>>('/cities?limit=100', emptyPage<CityRow>()),
+    fetchAssigneeOptions(),
   ]);
 
   return (
@@ -64,6 +66,7 @@ export default async function EditOrganizationPage({
         organizationId={org.id}
         countries={countries.items}
         cities={cities.items}
+        assignees={assignees}
         defaultValues={{
           name: org.name,
           externalReference: org.externalReference ?? '',
@@ -71,6 +74,7 @@ export default async function EditOrganizationPage({
           countryId: org.countryId ?? '',
           cityId: org.cityId ?? '',
           primaryContactEmail: org.primaryContactEmail ?? '',
+          defaultAssigneeUserId: org.defaultAssigneeUserId ?? '',
           isActive: org.isActive,
         }}
       />
