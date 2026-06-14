@@ -3,11 +3,16 @@
 import { Bell, Check, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { apiWsOrigin, type NotificationView } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
-import { fetchNotificationsAction, markAllReadAction, markReadAction } from './actions';
+import {
+  fetchNotificationsAction,
+  fetchUnreadCountAction,
+  markAllReadAction,
+  markReadAction,
+} from './actions';
 
 interface Props {
   portal: 'admin' | 'client';
@@ -28,6 +33,31 @@ export function NotificationBell({ portal, wsToken, initialUnread }: Props) {
   const [items, setItems] = useState<NotificationView[] | null>(null);
   const [loading, setLoading] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  // Reflète `open` pour les handlers WebSocket (closure stable de l'effet socket).
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
+  /**
+   * Charge la liste et resynchronise le compteur depuis le serveur. C'est cette
+   * resynchronisation qui garantit que le badge reflète la réalité : si des
+   * notifications ont été lues ailleurs (page complète, autre onglet) ou si le
+   * compteur a dérivé, l'ouverture de la cloche le remet d'aplomb.
+   */
+  const loadList = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [list, count] = await Promise.all([
+        fetchNotificationsAction(false, 8),
+        fetchUnreadCountAction(),
+      ]);
+      setItems(list);
+      setUnread(count);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Connexion WebSocket temps réel (CDC §7 WEB_PUSH_REALTIME).
   useEffect(() => {
@@ -37,13 +67,19 @@ export function NotificationBell({ portal, wsToken, initialUnread }: Props) {
       auth: { token: wsToken },
     });
     socket.on('notification', () => {
-      setUnread((c) => c + 1);
-      setItems(null); // force un re-fetch à la prochaine ouverture
+      if (openRef.current) {
+        // Panneau ouvert : on recharge pour afficher la nouvelle entrée et
+        // garder le badge aligné, sans vider la liste affichée.
+        void loadList();
+      } else {
+        setUnread((c) => c + 1);
+        setItems(null); // marque la liste périmée pour la prochaine ouverture
+      }
     });
     return () => {
       socket.disconnect();
     };
-  }, [wsToken]);
+  }, [wsToken, loadList]);
 
   // Fermeture au clic extérieur.
   useEffect(() => {
@@ -57,15 +93,11 @@ export function NotificationBell({ portal, wsToken, initialUnread }: Props) {
     return () => document.removeEventListener('mousedown', onClick);
   }, [open]);
 
-  const toggle = async () => {
+  const toggle = () => {
     const next = !open;
     setOpen(next);
-    if (next && items === null) {
-      setLoading(true);
-      const list = await fetchNotificationsAction(false, 8);
-      setItems(list);
-      setLoading(false);
-    }
+    // À chaque ouverture : recharge la liste et resynchronise le badge.
+    if (next) void loadList();
   };
 
   const onItemClick = async (n: NotificationView) => {
