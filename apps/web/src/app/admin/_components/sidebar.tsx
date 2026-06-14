@@ -1,54 +1,14 @@
 'use client';
 
-import {
-  Boxes,
-  Building,
-  Building2,
-  Bug,
-  Globe,
-  LayoutDashboard,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Shield,
-  Sparkles,
-  Tags,
-  TicketCheck,
-  Users,
-} from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTransition } from 'react';
 import { Logo } from '@/components/logo';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { ADMIN_NAV, type NavItem } from './nav';
 import { toggleSidebarAction } from './sidebar-actions';
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: typeof LayoutDashboard;
-  badge?: string;
-}
-
-const NAV_ADMIN: NavItem[] = [
-  { label: 'Tableau de bord', href: '/admin', icon: LayoutDashboard },
-  { label: 'Utilisateurs', href: '/admin/users', icon: Users },
-  { label: 'Organisations', href: '/admin/organizations', icon: Building2 },
-  { label: 'Demandes', href: '/admin/requests', icon: TicketCheck },
-  { label: 'Bugs', href: '/admin/bugs', icon: Bug },
-];
-
-const NAV_CONFIG: NavItem[] = [
-  { label: 'Catégories', href: '/admin/categories', icon: Tags },
-  { label: 'Produits', href: '/admin/products', icon: Boxes },
-  { label: 'Priorités', href: '/admin/priorities', icon: Sparkles },
-  { label: 'Pays', href: '/admin/countries', icon: Globe },
-  { label: 'Villes', href: '/admin/cities', icon: Building },
-];
-
-const NAV_SYSTEM: NavItem[] = [
-  { label: 'Rôles & permissions', href: '/admin/roles', icon: Shield },
-];
 
 interface SidebarProps {
   collapsed: boolean;
@@ -117,24 +77,15 @@ export function Sidebar({ collapsed }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-2 py-4">
-          <NavSection
-            title="Administration"
-            items={NAV_ADMIN}
-            pathname={pathname}
-            collapsed={collapsed}
-          />
-          <NavSection
-            title="Configuration"
-            items={NAV_CONFIG}
-            pathname={pathname}
-            collapsed={collapsed}
-          />
-          <NavSection
-            title="Système"
-            items={NAV_SYSTEM}
-            pathname={pathname}
-            collapsed={collapsed}
-          />
+          {ADMIN_NAV.map((section) => (
+            <NavSection
+              key={section.title}
+              title={section.title}
+              items={section.items}
+              pathname={pathname}
+              collapsed={collapsed}
+            />
+          ))}
         </nav>
 
         {/* Footer version (caché en mode collapsed pour éviter un border-t orphelin) */}

@@ -1,40 +1,14 @@
 'use client';
 
-import {
-  Bell,
-  FileText,
-  LayoutDashboard,
-  LifeBuoy,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PlusCircle,
-  type LucideIcon,
-} from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTransition } from 'react';
 import { Logo } from '@/components/logo';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { CLIENT_NAV, type NavItem } from './nav';
 import { toggleClientSidebarAction } from './sidebar-actions';
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  badge?: string;
-}
-
-const NAV_PRIMARY: NavItem[] = [
-  { label: 'Tableau de bord', href: '/client', icon: LayoutDashboard },
-  { label: 'Nouvelle demande', href: '/client/requests/new', icon: PlusCircle },
-  { label: 'Mes demandes', href: '/client/requests', icon: FileText },
-];
-
-const NAV_SECONDARY: NavItem[] = [
-  { label: 'Notifications', href: '/client/notifications', icon: Bell },
-  { label: "Centre d'aide", href: '/client/help', icon: LifeBuoy },
-];
 
 interface SidebarProps {
   collapsed: boolean;
@@ -101,18 +75,15 @@ export function ClientSidebar({ collapsed }: SidebarProps) {
         </div>
 
         <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-2 py-4">
-          <NavSection
-            title="Mon espace"
-            items={NAV_PRIMARY}
-            pathname={pathname}
-            collapsed={collapsed}
-          />
-          <NavSection
-            title="Suivi"
-            items={NAV_SECONDARY}
-            pathname={pathname}
-            collapsed={collapsed}
-          />
+          {CLIENT_NAV.map((section) => (
+            <NavSection
+              key={section.title}
+              title={section.title}
+              items={section.items}
+              pathname={pathname}
+              collapsed={collapsed}
+            />
+          ))}
         </nav>
 
         {!collapsed && (
