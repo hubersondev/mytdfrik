@@ -20,9 +20,9 @@ export async function GET(request: Request) {
   if (q.length < 2) {
     return NextResponse.json(EMPTY);
   }
-  const results = await apiFetchOr<GlobalSearchResults>(
-    `/search?q=${encodeURIComponent(q)}`,
-    { ...EMPTY, query: q },
-  );
+  const results = await apiFetchOr<GlobalSearchResults>(`/search?q=${encodeURIComponent(q)}`, {
+    ...EMPTY,
+    query: q,
+  });
   return NextResponse.json(results);
 }

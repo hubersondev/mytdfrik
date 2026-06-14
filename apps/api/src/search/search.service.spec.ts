@@ -3,12 +3,23 @@ import { Category } from '../database/entities/category.entity';
 import { Product } from '../database/entities/product.entity';
 import { Request } from '../database/entities/request.entity';
 import { User } from '../database/entities/user.entity';
-import { buildLikeTerm, SearchService, type SearchViewer } from './search.service';
+import {
+  buildLikeTerm,
+  SearchService,
+  type SearchViewer,
+} from './search.service';
 
 /** QueryBuilder chaînable factice : toutes les méthodes renvoient le builder. */
 function qbMock(rows: unknown[]) {
   const qb: Record<string, jest.Mock> = {};
-  for (const m of ['where', 'andWhere', 'orWhere', 'orderBy', 'addOrderBy', 'take']) {
+  for (const m of [
+    'where',
+    'andWhere',
+    'orWhere',
+    'orderBy',
+    'addOrderBy',
+    'take',
+  ]) {
     qb[m] = jest.fn(() => qb);
   }
   qb.getMany = jest.fn(async () => rows);
@@ -19,17 +30,30 @@ function repoMock(rows: unknown[]) {
   const qb = qbMock(rows);
   const createQueryBuilder = jest.fn(() => qb);
   return {
-    repo: { createQueryBuilder } as unknown as Repository<Record<string, unknown>>,
+    repo: { createQueryBuilder } as unknown as Repository<
+      Record<string, unknown>
+    >,
     createQueryBuilder,
     qb,
   };
 }
 
 const REQUESTS = [
-  { id: 'r1', publicReference: 'MTF-20260101-0001', title: 'Bug login', status: 'NOUVELLE' },
+  {
+    id: 'r1',
+    publicReference: 'MTF-20260101-0001',
+    title: 'Bug login',
+    status: 'NOUVELLE',
+  },
 ];
 const USERS = [
-  { id: 'u1', firstName: 'Ada', lastName: 'Lovelace', email: 'ada@x.io', roleId: 'ADMIN' },
+  {
+    id: 'u1',
+    firstName: 'Ada',
+    lastName: 'Lovelace',
+    email: 'ada@x.io',
+    roleId: 'ADMIN',
+  },
 ];
 const PRODUCTS = [{ id: 'p1', code: 'PORTAIL', label: 'Portail' }];
 const CATEGORIES = [{ id: 'c1', code: 'TECH', label: 'Technique' }];
@@ -107,9 +131,12 @@ describe('SearchService', () => {
     expect(res.products).toEqual([]);
     expect(res.categories).toEqual([]);
     // Le filtre d'organisation est appliqué sur la requête des demandes.
-    expect(requests.qb.andWhere).toHaveBeenCalledWith('r.organization_id = :orgId', {
-      orgId: 'org-1',
-    });
+    expect(requests.qb.andWhere).toHaveBeenCalledWith(
+      'r.organization_id = :orgId',
+      {
+        orgId: 'org-1',
+      },
+    );
     expect(users.createQueryBuilder).not.toHaveBeenCalled();
     expect(products.createQueryBuilder).not.toHaveBeenCalled();
     expect(categories.createQueryBuilder).not.toHaveBeenCalled();
