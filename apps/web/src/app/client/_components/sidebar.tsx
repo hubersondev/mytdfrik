@@ -28,7 +28,7 @@ export function ClientSidebar({ collapsed }: SidebarProps) {
     <TooltipProvider delayDuration={200} skipDelayDuration={0}>
       <aside
         className={cn(
-          'sticky top-0 hidden h-screen shrink-0 flex-col self-start bg-gradient-to-b from-leaf-900 to-leaf-950 text-leaf-50 shadow-xl lg:flex',
+          'sticky top-0 hidden h-screen shrink-0 flex-col self-start bg-gradient-to-b from-leaf-900 to-leaf-950 text-leaf-50 shadow-xl dark:border-r dark:border-zinc-800/80 dark:from-zinc-900 dark:to-zinc-950 lg:flex',
           'transition-[width] duration-200 ease-out',
           collapsed ? 'w-16' : 'w-64',
         )}
