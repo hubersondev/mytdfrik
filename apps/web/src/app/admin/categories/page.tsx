@@ -23,12 +23,18 @@ interface CursorPage<T> {
 export default async function CategoriesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; size?: string }>;
+  searchParams: Promise<{ page?: string; size?: string; q?: string }>;
 }) {
   const params = await searchParams;
   const PAGE_SIZE = resolvePageSize(params.size);
+  const query = (params.q ?? '').trim().toLowerCase();
   const page = await apiFetch<CursorPage<CategoryRow>>('/categories?limit=100');
-  const items = [...page.items].sort((a, b) => {
+  const filtered = query
+    ? page.items.filter((c) =>
+        `${c.code} ${c.label} ${c.description ?? ''}`.toLowerCase().includes(query),
+      )
+    : page.items;
+  const items = [...filtered].sort((a, b) => {
     if (a.defaultPriorityId !== b.defaultPriorityId) {
       return a.defaultPriorityId.localeCompare(b.defaultPriorityId);
     }

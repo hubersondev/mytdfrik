@@ -1,9 +1,10 @@
 'use client';
 
-import { LogOut, Search, UserCircle } from 'lucide-react';
+import { LogOut, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useTransition } from 'react';
 import { NotificationBell } from '@/components/notifications/notification-bell';
+import { GlobalSearch } from '@/components/search/global-search';
 import { Avatar, AvatarFallback, initials } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -29,19 +30,8 @@ export function TopBar({ user, theme, wsToken, initialUnread }: TopBarProps) {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-zinc-200/70 bg-white/80 px-6 backdrop-blur-md dark:border-zinc-800/70 dark:bg-zinc-950/70">
-      {/* Barre de recherche centrée — placeholder S3+ (recherche cross-tickets/utilisateurs) */}
-      <div className="relative mx-auto hidden w-full max-w-md md:block">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
-        <input
-          type="search"
-          disabled
-          placeholder="Rechercher un ticket, un utilisateur…"
-          className="h-9 w-full rounded-md border border-zinc-200 bg-white pl-9 pr-12 text-sm text-zinc-700 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf-500 disabled:cursor-not-allowed disabled:opacity-70 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
-        />
-        <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 select-none rounded border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 sm:inline-block">
-          ⌘K
-        </kbd>
-      </div>
+      {/* Recherche globale (palette ⌘K) — demandes / utilisateurs / catalogue */}
+      <GlobalSearch />
 
       <div className="ml-auto flex items-center gap-2">
         <ThemeToggle current={theme} />
