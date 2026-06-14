@@ -22,7 +22,7 @@ function qbMock(rows: unknown[]) {
   ]) {
     qb[m] = jest.fn(() => qb);
   }
-  qb.getMany = jest.fn(async () => rows);
+  qb.getMany = jest.fn(() => Promise.resolve(rows));
   return qb;
 }
 
