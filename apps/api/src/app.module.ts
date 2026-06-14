@@ -17,6 +17,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { RbacModule } from './rbac/rbac.module';
 import { ReportingModule } from './reporting/reporting.module';
 import { RequestsModule } from './requests/requests.module';
+import { SearchModule } from './search/search.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -70,6 +71,7 @@ import { UsersModule } from './users/users.module';
     CatalogModule,
     GeoModule,
     RequestsModule,
+    SearchModule,
     NotificationsModule,
     ReportingModule,
     HealthModule,
