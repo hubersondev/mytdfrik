@@ -82,7 +82,7 @@ export function MobileNav({ sections, subtitle, rootHref }: Props) {
             />
 
             {/* Tiroir */}
-            <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85%] flex-col bg-gradient-to-b from-leaf-900 to-leaf-950 text-leaf-50 shadow-xl">
+            <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85%] flex-col bg-gradient-to-b from-leaf-900 to-leaf-950 text-leaf-50 shadow-xl dark:from-zinc-900 dark:to-zinc-950">
               <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/15">
