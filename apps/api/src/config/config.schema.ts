@@ -48,7 +48,12 @@ export const configValidationSchema = Joi.object({
   // Sentry (optionnel en dev, requis en production)
   SENTRY_DSN: Joi.string().uri().optional().allow(''),
 
-  // Email transactionnel (CDC §7.4) — fournisseur Resend
+  // Email transactionnel (CDC §7.4)
+  // Priorité : SMTP (Mailpit en local) > Resend (prod) > DEV (log only).
+  SMTP_HOST: Joi.string().optional().allow(''),
+  SMTP_PORT: Joi.number().default(1025),
+  SMTP_USER: Joi.string().optional().allow(''),
+  SMTP_PASSWORD: Joi.string().optional().allow(''),
   RESEND_API_KEY: Joi.string().optional().allow(''),
   MAIL_FROM_ADDRESS: Joi.string().email().default('onboarding@resend.dev'),
   MAIL_FROM_NAME: Joi.string().default('MyTDFRIK · TECHDIFRIK'),
