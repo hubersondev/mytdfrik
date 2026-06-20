@@ -1,41 +1,18 @@
 import 'server-only';
 import { cookies } from 'next/headers';
+import {
+  AUTH_COOKIE_NAME,
+  COOKIE_MAX_AGE_SECONDS,
+  hasPermission,
+  type RoleScope,
+  type SessionPayload,
+  type SessionUser,
+} from './session-cookie';
 
-/**
- * Cookie HttpOnly portant la session — JWT + refresh token côté serveur uniquement.
- * Aucun accès JS côté client. Lifetime = celle du refresh token (7j).
- */
-export const AUTH_COOKIE_NAME = 'mytdfrik_session';
-const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 jours
-
-export type RoleScope = 'INTERNAL' | 'CLIENT';
-
-export interface SessionUser {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  /** Code du rôle (dynamique depuis ADR-004). */
-  roleId: string;
-  organizationId: string | null;
-  timeZone: string;
-  /** Portail du rôle : INTERNAL → /admin, CLIENT → /client. */
-  scope: RoleScope;
-  /** Permissions effectives — sert à conditionner l'affichage côté UI. */
-  permissions: string[];
-}
-
-/** Vrai si l'utilisateur possède la permission (ou s'il est super-admin). */
-export function hasPermission(user: SessionUser, code: string): boolean {
-  return user.permissions.includes(code);
-}
-
-export interface SessionPayload {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number; // epoch seconds
-  user: SessionUser;
-}
+// Ré-exporte les constantes/types neutres pour préserver les imports existants
+// depuis '@/lib/auth' (le middleware, lui, importe depuis './session-cookie').
+export { AUTH_COOKIE_NAME, hasPermission };
+export type { RoleScope, SessionPayload, SessionUser };
 
 export async function getSession(): Promise<SessionPayload | null> {
   const store = await cookies();
