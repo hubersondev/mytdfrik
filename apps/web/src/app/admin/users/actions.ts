@@ -140,6 +140,28 @@ export async function reactivateUserAction(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+/** Supprime (soft-delete) un utilisateur (DELETE /users/:id). */
+export async function deleteUserAction(id: string): Promise<ActionResult> {
+  try {
+    await apiFetch<void>(`/users/${id}`, { method: 'DELETE' });
+  } catch (error) {
+    if (isNextRedirect(error)) throw error;
+    const apiError = error as { code?: string; message?: string };
+    if (apiError?.code === 'CANNOT_DELETE_SELF') {
+      return { ok: false, message: 'Vous ne pouvez pas supprimer votre propre compte.' };
+    }
+    if (apiError?.code === 'CANNOT_DELETE_LAST_ADMIN') {
+      return {
+        ok: false,
+        message: 'Impossible de supprimer le dernier administrateur actif.',
+      };
+    }
+    return { ok: false, message: apiError?.message ?? 'Échec de la suppression.' };
+  }
+  revalidatePath('/admin/users');
+  return { ok: true };
+}
+
 /** Émet un lien de réinitialisation de mot de passe (POST /users/:id/password-reset). */
 export async function resetPasswordAction(id: string): Promise<ActionResult> {
   try {
