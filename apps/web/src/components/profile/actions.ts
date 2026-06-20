@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, isNextRedirect } from '@/lib/api';
 import { getSession, setSession } from '@/lib/auth';
 
 export interface ProfileResult {
@@ -42,6 +42,7 @@ export async function updateProfileAction(input: {
       }),
     });
   } catch (error) {
+    if (isNextRedirect(error)) throw error;
     return {
       ok: false,
       message: (error as { message?: string })?.message ?? 'Échec de la mise à jour.',
@@ -80,6 +81,7 @@ export async function changePasswordAction(input: {
       }),
     });
   } catch (error) {
+    if (isNextRedirect(error)) throw error;
     const apiError = error as { status?: number; code?: string; message?: string };
     if (apiError?.code === 'INVALID_CURRENT_PASSWORD') {
       return { ok: false, fieldErrors: { currentPassword: 'Mot de passe actuel incorrect.' } };

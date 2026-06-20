@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, isNextRedirect } from '@/lib/api';
 import type { CountryRow } from '@/lib/geo';
 import { countryFormSchema, type CountryFormInput } from './schema';
 
@@ -26,6 +26,7 @@ function collectFieldErrors(
 }
 
 function mapApiError(error: unknown): CountryFormFailure {
+  if (isNextRedirect(error)) throw error;
   const apiError = error as { status?: number; code?: string; message?: string };
   if (apiError?.status === 409 && apiError?.code === 'COUNTRY_CODE_TAKEN') {
     return { ok: false, fieldErrors: { code: 'Ce code pays est déjà utilisé.' } };
@@ -85,6 +86,7 @@ export async function deleteCountryAction(id: string): Promise<ActionResult> {
   try {
     await apiFetch<void>(`/countries/${id}`, { method: 'DELETE' });
   } catch (error) {
+    if (isNextRedirect(error)) throw error;
     return {
       ok: false,
       message: (error as { message?: string })?.message ?? 'Échec de la suppression.',

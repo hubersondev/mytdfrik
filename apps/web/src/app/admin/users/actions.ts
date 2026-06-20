@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, isNextRedirect } from '@/lib/api';
 import type { UserRow } from '@/lib/users';
 import { userFormSchema, type UserFormInput } from './schema';
 
@@ -39,6 +39,9 @@ function collectFieldErrors(
 }
 
 function mapApiError(error: unknown): UserFormFailure {
+  // Laisse passer la redirection de session expirée (401 → /api/auth/clear) :
+  // sans cela, NEXT_REDIRECT serait affiché comme un faux message d'erreur.
+  if (isNextRedirect(error)) throw error;
   const apiError = error as { status?: number; code?: string; message?: string };
   if (apiError?.status === 409 && apiError?.code === 'USER_EMAIL_TAKEN') {
     return { ok: false, fieldErrors: { email: 'Cette adresse e-mail est déjà utilisée.' } };
@@ -112,6 +115,7 @@ export async function deactivateUserAction(id: string): Promise<ActionResult> {
   try {
     await apiFetch<void>(`/users/${id}/deactivate`, { method: 'POST' });
   } catch (error) {
+    if (isNextRedirect(error)) throw error;
     return {
       ok: false,
       message: (error as { message?: string })?.message ?? 'Échec de la désactivation.',
@@ -126,6 +130,7 @@ export async function reactivateUserAction(id: string): Promise<ActionResult> {
   try {
     await apiFetch<void>(`/users/${id}/reactivate`, { method: 'POST' });
   } catch (error) {
+    if (isNextRedirect(error)) throw error;
     return {
       ok: false,
       message: (error as { message?: string })?.message ?? 'Échec de la réactivation.',
@@ -140,6 +145,7 @@ export async function resetPasswordAction(id: string): Promise<ActionResult> {
   try {
     await apiFetch<{ sent: boolean }>(`/users/${id}/password-reset`, { method: 'POST' });
   } catch (error) {
+    if (isNextRedirect(error)) throw error;
     return {
       ok: false,
       message: (error as { message?: string })?.message ?? "Échec de l'envoi du lien.",

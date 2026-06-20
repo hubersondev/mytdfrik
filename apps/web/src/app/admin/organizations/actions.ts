@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, isNextRedirect } from '@/lib/api';
 import type { OrganizationRow } from '@/lib/organizations';
 import { organizationFormSchema, type OrganizationFormInput } from './schema';
 
@@ -41,6 +41,7 @@ function collectFieldErrors(
 }
 
 function mapApiError(error: unknown): OrganizationFormFailure {
+  if (isNextRedirect(error)) throw error;
   const apiError = error as { status?: number; code?: string; message?: string };
   if (apiError?.status === 409 && apiError?.code === 'ORGANIZATION_NAME_TAKEN') {
     return { ok: false, fieldErrors: { name: 'Une organisation porte déjà ce nom.' } };
@@ -107,6 +108,7 @@ export async function deleteOrganizationAction(id: string): Promise<ActionResult
   try {
     await apiFetch<void>(`/organizations/${id}`, { method: 'DELETE' });
   } catch (error) {
+    if (isNextRedirect(error)) throw error;
     return {
       ok: false,
       message: (error as { message?: string })?.message ?? 'Échec de la suppression.',

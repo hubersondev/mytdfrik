@@ -8,7 +8,7 @@ import { AUTH_COOKIE_NAME, type SessionPayload } from './auth';
  * (digest commence par 'NEXT_REDIRECT'). Ces erreurs ne doivent jamais
  * être attrapées par les .catch() naïfs, sinon le redirect ne s'exécute pas.
  */
-function isNextRedirect(err: unknown): boolean {
+export function isNextRedirect(err: unknown): boolean {
   return (
     typeof err === 'object' &&
     err !== null &&
