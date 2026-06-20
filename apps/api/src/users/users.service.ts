@@ -252,6 +252,41 @@ export class UsersService {
   }
 
   /**
+   * Suppression logique (soft-delete) d'un utilisateur : pose `deleted_at`,
+   * révoque ses sessions et libère son e-mail (les requêtes filtrent
+   * `deleted_at IS NULL`). Garde-fous : pas d'auto-suppression, ni suppression
+   * du dernier administrateur actif.
+   */
+  async softDelete(id: string, actorId: string): Promise<void> {
+    if (id === actorId) {
+      throw new BadRequestException({
+        code: 'CANNOT_DELETE_SELF',
+        message: 'Vous ne pouvez pas supprimer votre propre compte.',
+      });
+    }
+    const u = await this.users.findOne({ where: { id, deletedAt: IsNull() } });
+    if (!u) throw new NotFoundException({ code: 'USER_NOT_FOUND' });
+
+    if (u.roleId === 'ADMIN') {
+      const remainingAdmins = await this.users.count({
+        where: { roleId: 'ADMIN', isActive: true, deletedAt: IsNull() },
+      });
+      if (remainingAdmins <= 1) {
+        throw new BadRequestException({
+          code: 'CANNOT_DELETE_LAST_ADMIN',
+          message: 'Impossible de supprimer le dernier administrateur actif.',
+        });
+      }
+    }
+
+    await this.sessions.update(
+      { userId: id, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
+    await this.users.softRemove(u);
+  }
+
+  /**
    * Force l'envoi d'un courriel de réinitialisation (CDC §9.6.1 [EXG-09-…]).
    * Le service Auth produit le token via le même mécanisme que la demande
    * publique. On le réutilise pour préserver l'unicité de la logique.

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -158,5 +159,19 @@ export class UsersController {
         );
       });
     return { sent: true };
+  }
+
+  @Delete(':id')
+  @RequirePermissions('users.manage')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary:
+      'Supprime (soft-delete) un utilisateur et révoque ses sessions (ADMIN)',
+  })
+  async remove(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    await this.service.softDelete(id, user.id);
   }
 }

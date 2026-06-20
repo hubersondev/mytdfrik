@@ -1,6 +1,6 @@
 'use client';
 
-import { KeyRound, Loader2, Pencil, Power, PowerOff } from 'lucide-react';
+import { KeyRound, Loader2, Pencil, Power, PowerOff, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import {
   deactivateUserAction,
+  deleteUserAction,
   reactivateUserAction,
   resetPasswordAction,
   type ActionResult,
@@ -98,6 +99,29 @@ export function UserRowActions({ userId, isActive, fullName }: Props) {
             </button>
           </TooltipTrigger>
           <TooltipContent>{isActive ? 'Désactiver' : 'Réactiver'}</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              disabled={pending}
+              aria-label={`Supprimer ${fullName}`}
+              onClick={() =>
+                run(
+                  () => deleteUserAction(userId),
+                  `Supprimer définitivement le compte de ${fullName} ? Il n'apparaîtra plus dans la liste et ses sessions seront révoquées.`,
+                )
+              }
+              className={cn(
+                iconBtn,
+                'hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30 dark:hover:text-rose-400',
+              )}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Supprimer</TooltipContent>
         </Tooltip>
       </div>
     </TooltipProvider>
