@@ -1,6 +1,6 @@
-import sgMail from '@sendgrid/mail';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Resend } from 'resend';
 import { renderTemplate, type TemplateCode } from './templates';
 
 export interface SendArgs {
@@ -13,11 +13,12 @@ export interface SendArgs {
  * MailService — couche d'envoi unifiée pour les courriels transactionnels.
  *
  * Deux stratégies selon l'environnement :
- *   - **Prod / staging** : envoi via SendGrid (`@sendgrid/mail`) avec
- *     `SENDGRID_API_KEY` requis.
+ *   - **Prod / staging** : envoi via Resend (`resend`) avec `RESEND_API_KEY`
+ *     requis. L'adresse `MAIL_FROM_ADDRESS` doit appartenir à un domaine
+ *     vérifié dans Resend (ou `onboarding@resend.dev` en test, qui ne livre
+ *     qu'à l'adresse du compte Resend).
  *   - **Dev local** : si la clé est absente, on logue le contenu et on
- *     retourne SUCCESS. Aucun envoi réel. Permet de développer sans
- *     compte SendGrid.
+ *     retourne SUCCESS. Aucun envoi réel. Permet de développer sans compte.
  *
  * Les gabarits sont définis en TypeScript (cf. ./templates) pour bénéficier
  * du typage des variables. Une migration vers une table `notification_templates`
@@ -26,31 +27,31 @@ export interface SendArgs {
 @Injectable()
 export class MailService implements OnModuleInit {
   private readonly logger = new Logger(MailService.name);
-  private apiKey: string | null = null;
+  private resend: Resend | null = null;
   private fromAddress!: string;
   private fromName!: string;
 
   constructor(private readonly config: ConfigService) {}
 
   onModuleInit(): void {
-    this.apiKey = this.config.get<string>('SENDGRID_API_KEY') ?? null;
+    const apiKey = this.config.get<string>('RESEND_API_KEY') ?? null;
     this.fromAddress = this.config.get<string>(
       'MAIL_FROM_ADDRESS',
-      'notifications@techdifrik.com',
+      'onboarding@resend.dev',
     );
     this.fromName = this.config.get<string>(
       'MAIL_FROM_NAME',
       'MyTDFRIK · TECHDIFRIK',
     );
 
-    if (this.apiKey) {
-      sgMail.setApiKey(this.apiKey);
+    if (apiKey) {
+      this.resend = new Resend(apiKey);
       this.logger.log(
-        `MailService prêt en mode SendGrid (from "${this.fromName}" <${this.fromAddress}>).`,
+        `MailService prêt en mode Resend (from "${this.fromName}" <${this.fromAddress}>).`,
       );
     } else {
       this.logger.warn(
-        `MailService en mode DEV (log only) — définissez SENDGRID_API_KEY pour activer l'envoi réel.`,
+        `MailService en mode DEV (log only) — définissez RESEND_API_KEY pour activer l'envoi réel.`,
       );
     }
   }
@@ -58,7 +59,7 @@ export class MailService implements OnModuleInit {
   async send(args: SendArgs): Promise<void> {
     const rendered = renderTemplate(args.template, args.variables);
 
-    if (!this.apiKey) {
+    if (!this.resend) {
       this.logger.log(
         `[MAIL DEV] → to=${args.to} template=${args.template}\n  sujet : ${rendered.subject}\n  variables : ${JSON.stringify(args.variables)}`,
       );
@@ -66,18 +67,23 @@ export class MailService implements OnModuleInit {
     }
 
     try {
-      await sgMail.send({
-        to: args.to,
-        from: { email: this.fromAddress, name: this.fromName },
+      const { data, error } = await this.resend.emails.send({
+        from: `${this.fromName} <${this.fromAddress}>`,
+        to: [args.to],
         subject: rendered.subject,
         text: rendered.text,
         html: rendered.html,
-        trackingSettings: {
-          clickTracking: { enable: false },
-          openTracking: { enable: false },
-        },
       });
-      this.logger.log(`Email envoyé : ${args.template} → ${args.to}`);
+      if (error) {
+        // Resend retourne l'erreur dans la réponse (ne lève pas).
+        this.logger.error(
+          `Échec envoi email ${args.template} → ${args.to} : ${error.name} — ${error.message}`,
+        );
+        return;
+      }
+      this.logger.log(
+        `Email envoyé : ${args.template} → ${args.to} (id=${data?.id ?? '—'})`,
+      );
     } catch (error) {
       this.logger.error(
         `Échec envoi email ${args.template} → ${args.to}`,
