@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { apiFetch, apiFetchOr } from '@/lib/api';
+import { apiFetch, apiFetchOr, isNextRedirect } from '@/lib/api';
 import type { NotificationView, PreferenceMap } from '@/lib/notifications';
 
 /** Liste mes notifications (récentes ou non lues). */
@@ -50,6 +50,7 @@ export async function updatePreferencesAction(
       body: JSON.stringify({ preferences }),
     });
   } catch (error) {
+    if (isNextRedirect(error)) throw error;
     return { ok: false, message: (error as { message?: string })?.message };
   }
   return { ok: true };
