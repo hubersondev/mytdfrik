@@ -48,11 +48,9 @@ export const configValidationSchema = Joi.object({
   // Sentry (optionnel en dev, requis en production)
   SENTRY_DSN: Joi.string().uri().optional().allow(''),
 
-  // Email transactionnel (CDC §7.4)
-  SENDGRID_API_KEY: Joi.string().optional().allow(''),
-  MAIL_FROM_ADDRESS: Joi.string()
-    .email()
-    .default('notifications@techdifrik.com'),
+  // Email transactionnel (CDC §7.4) — fournisseur Resend
+  RESEND_API_KEY: Joi.string().optional().allow(''),
+  MAIL_FROM_ADDRESS: Joi.string().email().default('onboarding@resend.dev'),
   MAIL_FROM_NAME: Joi.string().default('MyTDFRIK · TECHDIFRIK'),
 
   // URL publique du front (sert à construire les liens dans les courriels)
