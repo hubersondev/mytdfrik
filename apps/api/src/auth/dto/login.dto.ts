@@ -9,7 +9,7 @@ export class LoginDto {
 
   @ApiProperty({
     example: 'ChangeMeImmediately!42',
-    minLength: 12,
+    minLength: 8,
     maxLength: 128,
   })
   @IsString()

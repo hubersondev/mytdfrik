@@ -9,12 +9,12 @@ export class ChangePasswordDto {
   currentPassword!: string;
 
   @ApiProperty({
-    minLength: 12,
+    minLength: 8,
     description:
-      'Nouveau mot de passe — minimum 12 caractères, au moins 3 des 4 classes (CDC §10.2.1)',
+      'Nouveau mot de passe — minimum 8 caractères, au moins 3 des 4 classes (CDC §10.2.1)',
   })
   @IsString()
-  @MinLength(12)
+  @MinLength(8)
   @MaxLength(128)
   @Matches(
     /^(?=(?:.*[a-z]){1})(?=(?:.*[A-Z]){1})(?=(?:.*\d){1})|(?=(?:.*[a-z]){1})(?=(?:.*[A-Z]){1})(?=(?:.*[^a-zA-Z0-9]){1})|(?=(?:.*[a-z]){1})(?=(?:.*\d){1})(?=(?:.*[^a-zA-Z0-9]){1})|(?=(?:.*[A-Z]){1})(?=(?:.*\d){1})(?=(?:.*[^a-zA-Z0-9]){1})/,

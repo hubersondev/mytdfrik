@@ -8,11 +8,11 @@ export class ActivateDto {
   token!: string;
 
   @ApiProperty({
-    minLength: 12,
+    minLength: 8,
     description: 'Premier mot de passe — politique identique à reset',
   })
   @IsString()
-  @MinLength(12)
+  @MinLength(8)
   @MaxLength(128)
   @Matches(
     /^(?=(?:.*[a-z]){1})(?=(?:.*[A-Z]){1})(?=(?:.*\d){1})|(?=(?:.*[a-z]){1})(?=(?:.*[A-Z]){1})(?=(?:.*[^a-zA-Z0-9]){1})|(?=(?:.*[a-z]){1})(?=(?:.*\d){1})(?=(?:.*[^a-zA-Z0-9]){1})|(?=(?:.*[A-Z]){1})(?=(?:.*\d){1})(?=(?:.*[^a-zA-Z0-9]){1})/,
