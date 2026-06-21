@@ -17,6 +17,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { usePrompt } from '@/components/ui/prompt-dialog';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/toast';
 import type { AntivirusStatus, AttachmentView } from '@/lib/attachments';
@@ -85,6 +86,7 @@ export function AttachmentPanel({
 }: Props) {
   const router = useRouter();
   const toast = useToast();
+  const askReason = usePrompt();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -115,8 +117,14 @@ export function AttachmentPanel({
     });
   };
 
-  const withdraw = (attachmentId: string) => {
-    const reason = window.prompt('Motif du retrait de la pièce jointe :');
+  const withdraw = async (attachmentId: string) => {
+    const reason = await askReason({
+      title: 'Retirer la pièce jointe',
+      label: 'Motif du retrait',
+      placeholder: 'Expliquez brièvement le retrait…',
+      confirmLabel: 'Retirer',
+      required: true,
+    });
     if (!reason || !reason.trim()) return;
     startTransition(async () => {
       const result = await withdrawAttachmentAction(attachmentId, revalidatePath, reason);
@@ -187,7 +195,7 @@ export function AttachmentPanel({
                 {mine && !a.isWithdrawn && (
                   <button
                     type="button"
-                    onClick={() => withdraw(a.id)}
+                    onClick={() => void withdraw(a.id)}
                     disabled={pending}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
                     title="Retirer"

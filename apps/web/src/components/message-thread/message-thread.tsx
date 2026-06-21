@@ -6,6 +6,7 @@ import { useState, useTransition } from 'react';
 import { Avatar, AvatarFallback, initials } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { usePrompt } from '@/components/ui/prompt-dialog';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/toast';
 import type { MessageView } from '@/lib/messages';
@@ -34,6 +35,7 @@ export function MessageThread({
 }: Props) {
   const router = useRouter();
   const toast = useToast();
+  const askReason = usePrompt();
   const [body, setBody] = useState('');
   const [internal, setInternal] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,8 +62,14 @@ export function MessageThread({
     });
   };
 
-  const withdraw = (messageId: string) => {
-    const reason = window.prompt('Motif du retrait du message :');
+  const withdraw = async (messageId: string) => {
+    const reason = await askReason({
+      title: 'Retirer le message',
+      label: 'Motif du retrait',
+      placeholder: 'Expliquez brièvement le retrait…',
+      confirmLabel: 'Retirer',
+      required: true,
+    });
     if (!reason || !reason.trim()) return;
     startTransition(async () => {
       const result = await withdrawMessageAction(messageId, revalidatePath, reason);
@@ -127,7 +135,7 @@ export function MessageThread({
                   <div>
                     <button
                       type="button"
-                      onClick={() => withdraw(m.id)}
+                      onClick={() => void withdraw(m.id)}
                       disabled={pending}
                       className="mt-1 inline-flex items-center gap-1 text-[11px] text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400"
                     >

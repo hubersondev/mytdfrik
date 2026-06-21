@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { PromptProvider } from '@/components/ui/prompt-dialog';
 import { ToastProvider } from '@/components/ui/toast';
 import { getTheme } from '@/lib/theme';
 import './globals.css';
@@ -36,7 +37,9 @@ export default async function RootLayout({
       data-theme={theme}
     >
       <body className="flex min-h-full flex-col bg-sand-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <PromptProvider>{children}</PromptProvider>
+        </ToastProvider>
       </body>
     </html>
   );
