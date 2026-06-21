@@ -4,6 +4,7 @@ import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { loginAction, type LoginActionState } from './actions';
 
 const initialState: LoginActionState = {};
@@ -27,10 +28,9 @@ export function LoginForm() {
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="password">Mot de passe</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
           minLength={8}

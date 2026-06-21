@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { MoreThan, Repository } from 'typeorm';
+import { IsNull, MoreThan, Repository } from 'typeorm';
 import {
   AccountActivationToken,
   PasswordResetToken,
@@ -201,14 +201,14 @@ export class AuthService {
   async logout(refreshToken: string): Promise<void> {
     const tokenHash = hashToken(refreshToken);
     await this.sessions.update(
-      { refreshTokenHash: tokenHash, revokedAt: undefined },
+      { refreshTokenHash: tokenHash, revokedAt: IsNull() },
       { revokedAt: new Date() },
     );
   }
 
   async logoutAll(userId: string): Promise<void> {
     await this.sessions.update(
-      { userId, revokedAt: undefined },
+      { userId, revokedAt: IsNull() },
       { revokedAt: new Date() },
     );
   }
@@ -254,7 +254,7 @@ export class AuthService {
   ): Promise<void> {
     const tokenHash = hashToken(token);
     const tokenRecord = await this.passwordResetTokens.findOne({
-      where: { tokenHash, usedAt: undefined, expiresAt: MoreThan(new Date()) },
+      where: { tokenHash, usedAt: IsNull(), expiresAt: MoreThan(new Date()) },
     });
 
     if (!tokenRecord) {
@@ -280,7 +280,7 @@ export class AuthService {
 
     // Révoque toutes les sessions actives (CDC §10.2.1 [EXG-10-013])
     await this.sessions.update(
-      { userId: tokenRecord.userId, revokedAt: undefined },
+      { userId: tokenRecord.userId, revokedAt: IsNull() },
       { revokedAt: new Date() },
     );
   }
@@ -320,7 +320,7 @@ export class AuthService {
   async activateAccount(token: string, password: string): Promise<void> {
     const tokenHash = hashToken(token);
     const tokenRecord = await this.activationTokens.findOne({
-      where: { tokenHash, usedAt: undefined, expiresAt: MoreThan(new Date()) },
+      where: { tokenHash, usedAt: IsNull(), expiresAt: MoreThan(new Date()) },
     });
 
     if (!tokenRecord) {
