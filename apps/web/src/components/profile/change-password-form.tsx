@@ -25,8 +25,8 @@ export function ChangePasswordForm() {
     e.preventDefault();
     setError(null);
     setStatus('idle');
-    if (next.length < 12) {
-      setError('Le nouveau mot de passe doit faire au moins 12 caractères.');
+    if (next.length < 8) {
+      setError('Le nouveau mot de passe doit faire au moins 8 caractères.');
       return;
     }
     if (passwordClasses(next) < 3) {
@@ -58,7 +58,7 @@ export function ChangePasswordForm() {
             Mot de passe
           </h2>
           <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            Minimum 12 caractères, au moins 3 classes (minuscules, majuscules, chiffres, spéciaux).
+            Minimum 8 caractères, au moins 3 classes (minuscules, majuscules, chiffres, spéciaux).
           </p>
         </div>
 

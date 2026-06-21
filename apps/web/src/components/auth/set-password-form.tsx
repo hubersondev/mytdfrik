@@ -71,11 +71,11 @@ export function SetPasswordForm({ token, action, submitLabel, pendingLabel }: Pr
           name="password"
           autoComplete="new-password"
           required
-          minLength={12}
+          minLength={8}
           disabled={pending}
         />
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          12 caractères minimum, avec au moins 3 types parmi : minuscules, majuscules, chiffres,
+          8 caractères minimum, avec au moins 3 types parmi : minuscules, majuscules, chiffres,
           symboles.
         </p>
       </div>
@@ -86,7 +86,7 @@ export function SetPasswordForm({ token, action, submitLabel, pendingLabel }: Pr
           name="confirm"
           autoComplete="new-password"
           required
-          minLength={12}
+          minLength={8}
           disabled={pending}
         />
       </div>
