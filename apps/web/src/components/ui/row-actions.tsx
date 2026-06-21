@@ -4,6 +4,7 @@ import { Loader2, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
@@ -27,11 +28,22 @@ const iconBtn =
 /** Icônes d'action en ligne (modifier / supprimer) — gabarit des listes. */
 export function RowActions({ editHref, label, deleteAction, deleteId, deleteConfirm }: Props) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [pending, startTransition] = useTransition();
 
-  const remove = () => {
+  const remove = async () => {
     if (!deleteAction || !deleteId) return;
-    if (deleteConfirm && !window.confirm(deleteConfirm)) return;
+    if (
+      deleteConfirm &&
+      !(await confirm({
+        title: `Supprimer ${label}`,
+        description: deleteConfirm,
+        confirmLabel: 'Supprimer',
+        tone: 'danger',
+      }))
+    ) {
+      return;
+    }
     startTransition(async () => {
       const result = await deleteAction(deleteId);
       if (!result.ok && result.message) window.alert(result.message);
@@ -58,7 +70,7 @@ export function RowActions({ editHref, label, deleteAction, deleteId, deleteConf
                 type="button"
                 disabled={pending}
                 aria-label={`Supprimer ${label}`}
-                onClick={remove}
+                onClick={() => void remove()}
                 className={cn(
                   iconBtn,
                   'hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30 dark:hover:text-rose-400',

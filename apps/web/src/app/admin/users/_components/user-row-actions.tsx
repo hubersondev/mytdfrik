@@ -4,6 +4,7 @@ import { KeyRound, Loader2, Pencil, Power, PowerOff, Trash2 } from 'lucide-react
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
+import { useConfirm, type ConfirmOptions } from '@/components/ui/confirm-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import {
@@ -26,10 +27,11 @@ const iconBtn =
 /** Actions en ligne par ligne d'utilisateur (édition, activation, réinitialisation). */
 export function UserRowActions({ userId, isActive, fullName }: Props) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [pending, startTransition] = useTransition();
 
-  const run = (action: () => Promise<ActionResult>, confirmMessage?: string) => {
-    if (confirmMessage && !window.confirm(confirmMessage)) return;
+  const run = async (action: () => Promise<ActionResult>, confirmOpts?: ConfirmOptions) => {
+    if (confirmOpts && !(await confirm(confirmOpts))) return;
     startTransition(async () => {
       const result = await action();
       if (result.message) window.alert(result.message);
@@ -76,11 +78,13 @@ export function UserRowActions({ userId, isActive, fullName }: Props) {
               aria-label={isActive ? `Désactiver ${fullName}` : `Réactiver ${fullName}`}
               onClick={() =>
                 isActive
-                  ? run(
-                      () => deactivateUserAction(userId),
-                      `Désactiver le compte de ${fullName} ? Ses sessions actives seront révoquées.`,
-                    )
-                  : run(() => reactivateUserAction(userId))
+                  ? void run(() => deactivateUserAction(userId), {
+                      title: 'Désactiver le compte',
+                      description: `Désactiver le compte de ${fullName} ? Ses sessions actives seront révoquées.`,
+                      confirmLabel: 'Désactiver',
+                      tone: 'danger',
+                    })
+                  : void run(() => reactivateUserAction(userId))
               }
               className={cn(
                 iconBtn,
@@ -108,10 +112,12 @@ export function UserRowActions({ userId, isActive, fullName }: Props) {
               disabled={pending}
               aria-label={`Supprimer ${fullName}`}
               onClick={() =>
-                run(
-                  () => deleteUserAction(userId),
-                  `Supprimer définitivement le compte de ${fullName} ? Il n'apparaîtra plus dans la liste et ses sessions seront révoquées.`,
-                )
+                void run(() => deleteUserAction(userId), {
+                  title: "Supprimer l'utilisateur",
+                  description: `Supprimer définitivement le compte de ${fullName} ? Il n'apparaîtra plus dans la liste et ses sessions seront révoquées.`,
+                  confirmLabel: 'Supprimer',
+                  tone: 'danger',
+                })
               }
               className={cn(
                 iconBtn,
