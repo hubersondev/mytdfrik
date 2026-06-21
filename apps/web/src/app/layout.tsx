@@ -27,6 +27,10 @@ export default async function RootLayout({
   return (
     <html
       lang="fr"
+      // Les extensions de navigateur (ex. iorad) et le thème injectent des
+      // attributs sur <html> côté client : on évite les faux avertissements
+      // d'hydratation, sans masquer ceux du contenu applicatif.
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased ${theme === 'dark' ? 'dark' : ''}`}
       data-theme={theme}
     >
