@@ -1,49 +1,24 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
+import { SetPasswordForm } from '@/components/auth/set-password-form';
 import { Logo } from '@/components/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { getSession } from '@/lib/auth';
 import { getTheme } from '@/lib/theme';
-import { LoginForm } from './login-form';
+import { activateAction } from './actions';
 
-export const metadata = {
-  title: 'Connexion · MyTDFRIK',
-};
+export const metadata = { title: 'Activer mon compte · MyTDFRIK' };
 
-export default async function LoginPage({
+export default async function ActivatePage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    expired?: string;
-    denied?: string;
-    activated?: string;
-    reset?: string;
-  }>;
+  searchParams: Promise<{ token?: string }>;
 }) {
-  const params = await searchParams;
-  const session = await getSession();
-  if (session && !params.expired) {
-    redirect('/admin');
-  }
+  const { token } = await searchParams;
   const theme = await getTheme();
-
-  const notice = params.expired
-    ? 'Votre session a expiré. Veuillez vous reconnecter.'
-    : params.denied === 'role'
-      ? "Votre rôle ne permet pas d'accéder à cet espace."
-      : null;
-
-  const success = params.activated
-    ? 'Votre compte est activé. Vous pouvez maintenant vous connecter.'
-    : params.reset
-      ? 'Votre mot de passe a été réinitialisé. Connectez-vous avec le nouveau.'
-      : null;
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-sand-50 via-white to-leaf-50/60 px-4 dark:from-zinc-950 dark:via-zinc-950 dark:to-leaf-950/20">
-      {/* Halos décoratifs diffus aux coins (identité TECHDIFRIK). */}
       <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-leaf-300/20 blur-3xl dark:bg-leaf-800/20" />
       <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-brand-300/20 blur-3xl dark:bg-brand-900/20" />
       <div className="absolute right-4 top-4">
@@ -63,38 +38,28 @@ export default async function LoginPage({
 
         <Card className="p-8 shadow-soft-lg">
           <div className="mb-6 flex flex-col items-center gap-2 text-center">
-            <Badge variant="outline">Connexion</Badge>
+            <Badge variant="outline">Activation</Badge>
             <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Bon retour
+              Activez votre compte
             </h1>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Identifiez-vous pour accéder à la plateforme.
+              Choisissez un mot de passe pour finaliser la création de votre compte.
             </p>
           </div>
 
-          {success && (
-            <div
-              role="status"
-              className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
-            >
-              {success}
-            </div>
-          )}
-
-          {notice && (
-            <div
-              role="alert"
-              className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
-            >
-              {notice}
-            </div>
-          )}
-
-          <LoginForm />
+          <SetPasswordForm
+            token={token ?? ''}
+            action={activateAction}
+            submitLabel="Activer mon compte"
+            pendingLabel="Activation…"
+          />
         </Card>
 
         <p className="text-center text-xs text-zinc-500 dark:text-zinc-500">
-          Problème d&apos;accès ? Contactez votre administrateur.
+          Déjà actif ?{' '}
+          <Link href="/login" className="text-leaf-700 hover:underline dark:text-leaf-400">
+            Se connecter
+          </Link>
         </p>
       </div>
     </main>
