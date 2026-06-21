@@ -101,6 +101,19 @@ services:
     networks:
       - mytdfrik
 
+  # -------------------------- Boîte mail de test (dev) --------------------------
+  # Mailpit capture les courriels envoyés en local (SMTP) et les affiche dans une
+  # interface web — aucun envoi réel, idéal pour tester avant la prod.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mytdfrik-mailpit
+    restart: unless-stopped
+    ports:
+      - '${MAILPIT_UI_PORT:-8025}:8025' # Interface web
+      - '${MAILPIT_SMTP_PORT:-1025}:1025' # Serveur SMTP
+    networks:
+      - mytdfrik
+
   # -------------------------- Backend NestJS --------------------------
   api:
     build:
@@ -122,6 +135,9 @@ services:
       REDIS_URL: redis://redis:6379
       CLAMAV_HOST: clamav
       CLAMAV_PORT: 3310
+      # Courriels capturés par Mailpit (réseau interne Docker).
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
     labels:
       - traefik.enable=true
       - traefik.http.routers.api.rule=Host(`api.localhost`)
