@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +30,7 @@ const iconBtn =
 export function RowActions({ editHref, label, deleteAction, deleteId, deleteConfirm }: Props) {
   const router = useRouter();
   const confirm = useConfirm();
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
 
   const remove = async () => {
@@ -46,7 +48,7 @@ export function RowActions({ editHref, label, deleteAction, deleteId, deleteConf
     }
     startTransition(async () => {
       const result = await deleteAction(deleteId);
-      if (!result.ok && result.message) window.alert(result.message);
+      if (!result.ok && result.message) toast(result.message, 'error');
       router.refresh();
     });
   };

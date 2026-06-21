@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 import { useConfirm, type ConfirmOptions } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import {
@@ -28,13 +29,14 @@ const iconBtn =
 export function UserRowActions({ userId, isActive, fullName }: Props) {
   const router = useRouter();
   const confirm = useConfirm();
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
 
   const run = async (action: () => Promise<ActionResult>, confirmOpts?: ConfirmOptions) => {
     if (confirmOpts && !(await confirm(confirmOpts))) return;
     startTransition(async () => {
       const result = await action();
-      if (result.message) window.alert(result.message);
+      if (result.message) toast(result.message, result.ok ? 'success' : 'error');
       router.refresh();
     });
   };

@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, initials } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/components/ui/toast';
 import type { MessageView } from '@/lib/messages';
 import { cn } from '@/lib/utils';
 import { postMessageAction, withdrawMessageAction } from './actions';
@@ -32,6 +33,7 @@ export function MessageThread({
   canPostInternal,
 }: Props) {
   const router = useRouter();
+  const toast = useToast();
   const [body, setBody] = useState('');
   const [internal, setInternal] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export function MessageThread({
     if (!reason || !reason.trim()) return;
     startTransition(async () => {
       const result = await withdrawMessageAction(messageId, revalidatePath, reason);
-      if (!result.ok && result.message) window.alert(result.message);
+      if (!result.ok && result.message) toast(result.message, 'error');
       router.refresh();
     });
   };

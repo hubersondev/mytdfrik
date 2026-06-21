@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/components/ui/toast';
 import type { AntivirusStatus, AttachmentView } from '@/lib/attachments';
 import { cn } from '@/lib/utils';
 import { uploadAttachmentAction, withdrawAttachmentAction } from './actions';
@@ -83,6 +84,7 @@ export function AttachmentPanel({
   canUpload,
 }: Props) {
   const router = useRouter();
+  const toast = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -118,7 +120,7 @@ export function AttachmentPanel({
     if (!reason || !reason.trim()) return;
     startTransition(async () => {
       const result = await withdrawAttachmentAction(attachmentId, revalidatePath, reason);
-      if (!result.ok && result.message) window.alert(result.message);
+      if (!result.ok && result.message) toast(result.message, 'error');
       router.refresh();
     });
   };
