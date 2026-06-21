@@ -27,13 +27,14 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <ConfirmProvider>
       <div className="flex min-h-screen bg-transparent">
-        <Sidebar collapsed={sidebarCollapsed} />
+        <Sidebar collapsed={sidebarCollapsed} permissions={session.user.permissions} />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar
             user={session.user}
             theme={theme}
             wsToken={session.accessToken}
             initialUnread={unread}
+            permissions={session.user.permissions}
           />
           <main className="flex-1 overflow-x-hidden px-6 py-8 lg:px-10 lg:py-10">
             <div className="mx-auto max-w-[1600px]">{children}</div>

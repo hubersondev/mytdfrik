@@ -7,16 +7,19 @@ import { useTransition } from 'react';
 import { Logo } from '@/components/logo';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { ADMIN_NAV, type NavItem } from './nav';
+import { ADMIN_NAV, filterNavByPermissions, type NavItem } from './nav';
 import { toggleSidebarAction } from './sidebar-actions';
 
 interface SidebarProps {
   collapsed: boolean;
+  /** Permissions de l'utilisateur — filtrent les entrées de navigation. */
+  permissions: string[];
 }
 
-export function Sidebar({ collapsed }: SidebarProps) {
+export function Sidebar({ collapsed, permissions }: SidebarProps) {
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
+  const sections = filterNavByPermissions(ADMIN_NAV, permissions);
 
   const toggle = () => {
     startTransition(() => {
@@ -77,7 +80,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-2 py-4">
-          {ADMIN_NAV.map((section) => (
+          {sections.map((section) => (
             <NavSection
               key={section.title}
               title={section.title}

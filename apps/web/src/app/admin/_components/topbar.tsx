@@ -6,7 +6,7 @@ import { useTransition } from 'react';
 import { MobileNav } from '@/components/mobile-nav';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { GlobalSearch } from '@/components/search/global-search';
-import { ADMIN_NAV } from './nav';
+import { ADMIN_NAV, filterNavByPermissions } from './nav';
 import { Avatar, AvatarFallback, initials } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -25,15 +25,18 @@ interface TopBarProps {
   theme: 'light' | 'dark';
   wsToken: string;
   initialUnread: number;
+  /** Permissions de l'utilisateur — filtrent les entrées du menu mobile. */
+  permissions: string[];
 }
 
-export function TopBar({ user, theme, wsToken, initialUnread }: TopBarProps) {
+export function TopBar({ user, theme, wsToken, initialUnread, permissions }: TopBarProps) {
   const [loggingOut, startLogout] = useTransition();
+  const navSections = filterNavByPermissions(ADMIN_NAV, permissions);
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-zinc-200/70 bg-white/80 px-4 backdrop-blur-md dark:border-zinc-800/70 dark:bg-zinc-950/70 sm:px-6">
       {/* Menu mobile (sidebar masquée sous lg) */}
-      <MobileNav sections={ADMIN_NAV} subtitle="Administration" rootHref="/admin" />
+      <MobileNav sections={navSections} subtitle="Administration" rootHref="/admin" />
 
       {/* Recherche globale (palette ⌘K) — demandes / utilisateurs / catalogue */}
       <GlobalSearch />
