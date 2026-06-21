@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { validatePassword } from '@/lib/password-policy';
 
 export interface SetPasswordResult {
@@ -66,10 +66,9 @@ export function SetPasswordForm({ token, action, submitLabel, pendingLabel }: Pr
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="password">Nouveau mot de passe</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
           required
           minLength={12}
@@ -82,10 +81,9 @@ export function SetPasswordForm({ token, action, submitLabel, pendingLabel }: Pr
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="confirm">Confirmer le mot de passe</Label>
-        <Input
+        <PasswordInput
           id="confirm"
           name="confirm"
-          type="password"
           autoComplete="new-password"
           required
           minLength={12}

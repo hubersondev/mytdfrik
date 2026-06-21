@@ -4,8 +4,8 @@ import { AlertCircle, KeyRound, Loader2 } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { changePasswordAction } from './actions';
 
 /** Au moins 3 des 4 classes de caractères (aligné sur la politique serveur). */
@@ -64,8 +64,7 @@ export function ChangePasswordForm() {
 
         <div className="flex flex-col">
           <Label>Mot de passe actuel</Label>
-          <Input
-            type="password"
+          <PasswordInput
             autoComplete="current-password"
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
@@ -74,8 +73,7 @@ export function ChangePasswordForm() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col">
             <Label>Nouveau mot de passe</Label>
-            <Input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               value={next}
               onChange={(e) => setNext(e.target.value)}
@@ -83,8 +81,7 @@ export function ChangePasswordForm() {
           </div>
           <div className="flex flex-col">
             <Label>Confirmer</Label>
-            <Input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
