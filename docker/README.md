@@ -4,12 +4,22 @@ Ce dossier rassemble les fichiers de définition des environnements Docker (dev 
 
 ## Fichiers
 
-| Fichier                      | Description                                                                             |
-| ---------------------------- | --------------------------------------------------------------------------------------- |
-| `docker-compose.yml`         | Environnement de développement local (Postgres + Redis + ClamAV + Traefik + api + web). |
-| `.env.example`               | Variables d'environnement à copier en `.env` local.                                     |
-| `docker-compose.staging.yml` | (à créer en S8) — Environnement de staging sur VPS.                                     |
-| `docker-compose.prod.yml`    | (à créer en S9) — Environnement de production (DB et Redis managed Scaleway externes).  |
+| Fichier                      | Description                                                                               |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| `docker-compose.yml`         | Environnement de développement local (Postgres + Redis + ClamAV + Traefik + api + web).   |
+| `.env.example`               | Variables d'environnement à copier en `.env` local.                                       |
+| `docker-compose.prod.yml`    | Production sur VPS : Traefik + Let's Encrypt, migrations automatiques, réseau data privé. |
+| `.env.prod.example`          | Variables de production à copier en `.env.prod` **sur le VPS** (jamais commité).          |
+| `docker-compose.staging.yml` | (à créer) — Environnement de staging, dérivé du compose de production.                    |
+
+> **Déploiement en production :** procédure complète dans
+> [`docs/DEPLOIEMENT-VPS.md`](../docs/DEPLOIEMENT-VPS.md). Résumé :
+>
+> ```bash
+> cp docker/.env.prod.example docker/.env.prod   # renseigner domaines et secrets
+> ./scripts/deploy.sh --seed                     # premier déploiement
+> ./scripts/deploy.sh                            # mises à jour suivantes
+> ```
 
 ## Démarrage rapide
 
@@ -54,6 +64,6 @@ Le premier démarrage de ClamAV télécharge ~250 Mo de signatures. Le healthche
 
 ## Notes
 
-- **Production** : PostgreSQL et Redis sont managed par Scaleway, **pas** des conteneurs (CDC §11.9.4).
-- **Traefik en prod** : configuration Let's Encrypt sera ajoutée dans `docker-compose.prod.yml` au S9.
-- **Sécurité dev** : le dashboard Traefik est exposé `--api.insecure=true`. À désactiver en staging et prod.
+- **Production sur VPS** : `docker-compose.prod.yml` embarque PostgreSQL et Redis en conteneurs sur un réseau `internal`. Pour des bases managées (Scaleway, CDC §11.9.4), renseigner `DATABASE_URL` / `REDIS_URL` dans `.env.prod` et commenter les services correspondants.
+- **Traefik en prod** : Let's Encrypt (challenge HTTP-01), redirection HTTP → HTTPS, dashboard désactivé.
+- **Sécurité dev** : le dashboard Traefik est exposé `--api.insecure=true` — uniquement en local.

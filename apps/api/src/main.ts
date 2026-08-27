@@ -1,13 +1,22 @@
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+  });
+
+  // Derrière un reverse proxy (Traefik en production) : on fait confiance au
+  // premier saut X-Forwarded-* pour retrouver l'IP réelle de l'appelant. Sans
+  // cela, le rate limiting et les journaux voient l'IP du proxy pour tout le
+  // monde. La valeur 1 = un seul proxy en amont.
+  app.set('trust proxy', 1);
 
   // Logger structuré Pino (CDC §11.7.1)
   app.useLogger(app.get(Logger));

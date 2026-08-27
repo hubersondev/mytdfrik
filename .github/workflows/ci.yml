@@ -104,6 +104,11 @@ jobs:
         with:
           context: .
           file: ./apps/web/Dockerfile
+          # NEXT_PUBLIC_API_URL est figée dans le bundle client au build : définir
+          # la variable de dépôt (Settings > Variables) pour que l'image publiée
+          # soit utilisable en production. Cf. docs/DEPLOIEMENT-VPS.md §6.
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1' }}
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: |
             ghcr.io/${{ github.repository }}/web:latest

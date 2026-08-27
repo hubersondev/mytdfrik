@@ -44,6 +44,10 @@ COPY --from=deploy --chown=app:app /deploy/dist ./dist
 COPY --from=deploy --chown=app:app /deploy/node_modules ./node_modules
 COPY --from=deploy --chown=app:app /deploy/package.json ./
 
+# Dossier des pièces jointes (STORAGE_DRIVER=local). Créé avant le montage pour
+# qu'un volume Docker attaché à cet emplacement hérite des droits de `app`.
+RUN mkdir -p /app/.storage && chown app:app /app/.storage
+
 USER app
 
 EXPOSE 3000

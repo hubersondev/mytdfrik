@@ -1,0 +1,6 @@
+# Fins de ligne normalisées en LF : ces fichiers sont exécutés sous Linux (VPS,
+# conteneurs, CI) même lorsqu'ils sont édités depuis Windows.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

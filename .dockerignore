@@ -1,0 +1,48 @@
+# Contexte de build Docker (les deux Dockerfile utilisent la racine du dépôt).
+# Sans ce fichier, `docker build` échoue sur les liens symboliques de pnpm
+# (`invalid file request apps/api/node_modules/...`) dès qu'un `pnpm install`
+# a été fait localement, et le contexte pèse plusieurs centaines de Mo.
+
+# Dépendances — réinstallées dans l'image à partir du lockfile
+node_modules
+**/node_modules
+.pnpm-store
+
+# Artefacts de build — reconstruits dans l'image
+dist
+**/dist
+.next
+**/.next
+.turbo
+**/.turbo
+out
+build
+coverage
+**/coverage
+*.tsbuildinfo
+
+# Secrets et environnements locaux
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.prod.example
+
+# Données locales
+apps/api/.storage
+backups
+*.log
+
+# Outillage et documentation, inutiles au build
+.git
+.github
+.vscode
+.idea
+docs
+docker
+scripts
+*.md
+!apps/*/README.md
+Note_Presentation_MyTDFRIK.docx
+logo_techdifrik.png

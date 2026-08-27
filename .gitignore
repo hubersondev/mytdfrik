@@ -13,7 +13,13 @@ build/
 .env
 .env.local
 .env.*.local
+.env.prod
+.env.staging
 !.env.example
+!.env.prod.example
+
+# Sauvegardes de base de données (script scripts/backup-db.sh)
+backups/
 
 # IDE
 .idea/

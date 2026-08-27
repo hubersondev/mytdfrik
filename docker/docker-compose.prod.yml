@@ -1,0 +1,239 @@
+# Docker Compose — production MyTDFRIK sur VPS (Traefik + Let's Encrypt).
+#
+# Différences avec docker-compose.yml (dev) :
+#   - TLS automatique Let's Encrypt, redirection HTTP -> HTTPS
+#   - Dashboard Traefik désactivé, aucun port Postgres/Redis exposé sur l'hôte
+#   - Migrations TypeORM jouées automatiquement avant le démarrage de l'API
+#   - Pas de Mailpit ni de ClamAV (courriels via SMTP/Resend réels)
+#
+# Usage (depuis la racine du dépôt, sur le VPS) :
+#   cp docker/.env.prod.example docker/.env.prod   # puis renseigner les valeurs
+#   ./scripts/deploy.sh
+#
+# Ou manuellement :
+#   docker compose --env-file docker/.env.prod -f docker/docker-compose.prod.yml up -d --build
+
+name: mytdfrik-prod
+
+networks:
+  # Réseau exposé : uniquement Traefik et les services HTTP.
+  edge:
+    driver: bridge
+  # Réseau privé : données. Pas de route vers l'extérieur.
+  backend:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_data:
+  redis_data:
+  letsencrypt:
+  api_storage:
+
+x-logging: &default_logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+services:
+  # -------------------------- Reverse proxy + TLS --------------------------
+  traefik:
+    image: traefik:v3.2
+    container_name: mytdfrik-traefik-prod
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=mytdfrik-prod_edge
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.permanent=true
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls.certresolver=letsencrypt
+      # Certificats Let's Encrypt via challenge HTTP-01 : le port 80 doit être
+      # joignable depuis Internet et les DNS doivent déjà pointer sur le VPS.
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:?ACME_EMAIL manquant dans .env.prod}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      # Sécurité : pas de dashboard exposé en production.
+      - --api.dashboard=false
+      - --ping=true
+      - --log.level=${TRAEFIK_LOG_LEVEL:-INFO}
+      - --accesslog=true
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    networks:
+      edge:
+        # Alias DNS internes : le serveur Next.js peut appeler https://api.exemple.com
+        # sans repasser par l'IP publique du VPS (évite les soucis de hairpin NAT).
+        aliases:
+          - ${WEB_DOMAIN:?WEB_DOMAIN manquant dans .env.prod}
+          - ${API_DOMAIN:?API_DOMAIN manquant dans .env.prod}
+    healthcheck:
+      test: ['CMD', 'traefik', 'healthcheck', '--ping']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *default_logging
+
+  # -------------------------- Base de données --------------------------
+  # Pour une base managée externe : commenter ce service, retirer les depends_on
+  # qui le référencent et renseigner DATABASE_URL dans .env.prod.
+  postgres:
+    image: postgres:16-alpine
+    container_name: mytdfrik-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER manquant dans .env.prod}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant dans .env.prod}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB manquant dans .env.prod}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+    logging: *default_logging
+
+  # -------------------------- Cache --------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: mytdfrik-redis-prod
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD manquant dans .env.prod}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+    logging: *default_logging
+
+  # -------------------------- Migrations (one-shot) --------------------------
+  # Joue les migrations TypeORM puis s'arrête. L'API ne démarre qu'après sa
+  # sortie en succès (service_completed_successfully).
+  migrate:
+    image: ${API_IMAGE:-mytdfrik/api:local}
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    container_name: mytdfrik-migrate-prod
+    restart: 'no'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Nécessaire aux seeds lancés via ce service (ADMIN_BOOTSTRAP_*, BCRYPT_COST).
+    env_file:
+      - .env.prod
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
+    command:
+      - node
+      - node_modules/typeorm/cli.js
+      - migration:run
+      - -d
+      - dist/database/data-source.js
+    networks:
+      - backend
+    logging: *default_logging
+
+  # -------------------------- Backend NestJS --------------------------
+  api:
+    image: ${API_IMAGE:-mytdfrik/api:local}
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    container_name: mytdfrik-api-prod
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # Secrets applicatifs (JWT, SMTP/Resend, Sentry, S3…).
+    env_file:
+      - .env.prod
+    # Ces valeurs sont dérivées des domaines : elles écrasent le fichier .env.prod.
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
+      REDIS_URL: ${REDIS_URL:-redis://:${REDIS_PASSWORD}@redis:6379}
+      CORS_ORIGINS: https://${WEB_DOMAIN}
+      API_PUBLIC_BASE_URL: https://${API_DOMAIN}
+      APP_WEB_BASE_URL: https://${WEB_DOMAIN}
+    volumes:
+      # Pièces jointes quand STORAGE_DRIVER=local. Inutile avec STORAGE_DRIVER=s3.
+      - api_storage:/app/.storage
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=mytdfrik-prod_edge
+      - traefik.http.routers.api.rule=Host(`${API_DOMAIN}`)
+      - traefik.http.routers.api.entrypoints=websecure
+      - traefik.http.routers.api.tls.certresolver=letsencrypt
+      - traefik.http.routers.api.middlewares=mytdfrik-secure@docker,mytdfrik-compress@docker
+      - traefik.http.services.api.loadbalancer.server.port=3000
+    networks:
+      - edge
+      - backend
+    logging: *default_logging
+
+  # -------------------------- Frontend Next.js --------------------------
+  web:
+    image: ${WEB_IMAGE:-mytdfrik/web:local}
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        # ATTENTION : une variable NEXT_PUBLIC_* est figée dans le bundle au build.
+        # Changer de domaine d'API impose de reconstruire l'image web.
+        NEXT_PUBLIC_API_URL: https://${API_DOMAIN}/api/v1
+    container_name: mytdfrik-web-prod
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      # Utilisée par le rendu serveur (middleware, server components).
+      NEXT_PUBLIC_API_URL: https://${API_DOMAIN}/api/v1
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=mytdfrik-prod_edge
+      - traefik.http.routers.web.rule=Host(`${WEB_DOMAIN}`)
+      - traefik.http.routers.web.entrypoints=websecure
+      - traefik.http.routers.web.tls.certresolver=letsencrypt
+      - traefik.http.routers.web.middlewares=mytdfrik-secure@docker,mytdfrik-compress@docker
+      - traefik.http.services.web.loadbalancer.server.port=3001
+      # --- Middlewares partagés, déclarés ici et réutilisés par l'API ---
+      - traefik.http.middlewares.mytdfrik-compress.compress=true
+      - traefik.http.middlewares.mytdfrik-secure.headers.stsSeconds=31536000
+      - traefik.http.middlewares.mytdfrik-secure.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.mytdfrik-secure.headers.stsPreload=true
+      - traefik.http.middlewares.mytdfrik-secure.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.mytdfrik-secure.headers.frameDeny=true
+      - traefik.http.middlewares.mytdfrik-secure.headers.referrerPolicy=strict-origin-when-cross-origin
+    networks:
+      - edge
+    logging: *default_logging

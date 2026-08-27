@@ -24,6 +24,12 @@ WORKDIR /repo/apps/web
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# URL publique de l'API : variable NEXT_PUBLIC_*, donc figée dans le bundle
+# client au moment du build. Surchargée par docker-compose.prod.yml (build.args).
+# La forme :- protège aussi contre un --build-arg passé vide (CI sans variable).
+ARG NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000/api/v1}
+
 RUN pnpm build
 
 # ---------- Étape 4 : runtime (Next.js standalone output) ----------
