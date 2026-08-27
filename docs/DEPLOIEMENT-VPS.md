@@ -1,29 +1,37 @@
 # Déploiement MyTDFRIK sur VPS (Docker Compose + Traefik)
 
-Procédure complète de mise en production sur un serveur dédié ou un VPS, avec
-Traefik en reverse proxy et certificats Let's Encrypt automatiques.
+Procédure complète de mise en production sur le VPS, derrière le Traefik
+mutualisé du serveur, avec certificats Let's Encrypt automatiques.
 
 ---
 
 ## 1. Prérequis
+
+> **Serveur mutualisé.** MyTDFRIK est déployé sur un VPS qui héberge déjà
+> d'autres applications (GitLab, n8n, Hyperion, Komodo) derrière un **Traefik
+> commun**. Cette pile ne démarre donc pas son propre reverse proxy et ne publie
+> aucun port : elle rejoint le réseau du Traefik existant. Détails en
+> [§2](#2-traefik-mutualisé).
 
 ### 1.1 Serveur
 
 | Ressource | Minimum                  | Recommandé                     |
 | --------- | ------------------------ | ------------------------------ |
 | CPU       | 2 vCPU                   | 4 vCPU                         |
-| RAM       | 4 Go                     | 8 Go (build Next.js sur place) |
+| RAM       | 4 Go **disponibles**     | 8 Go (build Next.js sur place) |
 | Disque    | 40 Go SSD                | 80 Go SSD                      |
 | OS        | Ubuntu 22.04 / Debian 12 | idem                           |
 
-> **RAM et build.** Le build de l'image `web` (Next.js) consomme ~2 Go. Sur un
-> VPS à 2 Go, utilisez les images pré-construites par la CI (`--pull`, cf. §6)
-> ou ajoutez temporairement un fichier d'échange (swap).
+> **RAM et build.** Le build de l'image `web` (Next.js) consomme ~2 Go, en plus
+> de ce que consomment les piles déjà en place. Vérifier `free -h` avant de
+> lancer un build sur le serveur ; à défaut, utiliser les images pré-construites
+> par la CI (`--pull`, cf. §7) ou ajouter temporairement un fichier d'échange.
 
 ### 1.2 DNS
 
 Deux enregistrements `A` (et `AAAA` si IPv6) doivent pointer sur l'IP du VPS
-**avant** le premier démarrage — Let's Encrypt valide via le port 80 :
+**avant** le premier démarrage — le resolver ACME du serveur valide en TLS-ALPN,
+donc sur le port 443 :
 
 ```
 support.techdifrik.com.   A   203.0.113.10
@@ -37,19 +45,23 @@ Le domaine `techdifrik.com` est géré chez Hostinger : marche à suivre détail
 
 ### 1.3 Logiciels sur le VPS
 
-```bash
-# Docker Engine + plugin compose (script officiel)
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker "$USER"   # puis se reconnecter
+Docker Engine et le plugin Compose sont déjà installés sur ce serveur. Contrôle :
 
+```bash
 docker --version
 docker compose version
 ```
 
+Sur une machine vierge : `curl -fsSL https://get.docker.com | sh`, puis
+`sudo usermod -aG docker "$USER"` et reconnexion.
+
 ### 1.4 Pare-feu
 
-Seuls 22, 80 et 443 doivent être ouverts. Postgres et Redis ne sont jamais
-exposés : ils vivent sur un réseau Docker `internal`.
+Les ports 80 et 443 sont **déjà ouverts et occupés par le Traefik du serveur** :
+il n'y a rien à modifier. Postgres et Redis de MyTDFRIK ne sont jamais exposés,
+ils vivent sur un réseau Docker `internal`.
+
+Sur une machine vierge uniquement :
 
 ```bash
 sudo ufw allow OpenSSH
@@ -60,7 +72,56 @@ sudo ufw enable
 
 ---
 
-## 2. Récupération du code
+## 2. Traefik mutualisé
+
+Le VPS fait tourner un Traefik commun à toutes les applications hébergées. La
+pile MyTDFRIK s'y raccorde au lieu d'en démarrer un second : deux reverse
+proxies ne peuvent pas écouter les mêmes ports 80 et 443.
+
+Configuration du Traefik en place, à laquelle `docker-compose.prod.yml` se
+conforme :
+
+| Élément                  | Valeur                                       | Variable correspondante     |
+| ------------------------ | -------------------------------------------- | --------------------------- |
+| Réseau Docker            | `traefik`                                    | `TRAEFIK_NETWORK`           |
+| Entrypoint HTTP          | `web` (:80)                                  | `TRAEFIK_ENTRYPOINT_HTTP`   |
+| Entrypoint HTTPS         | `websecure` (:443)                           | `TRAEFIK_ENTRYPOINT_HTTPS`  |
+| Resolver ACME            | `letsencrypt`, challenge TLS-ALPN            | `TRAEFIK_CERTRESOLVER`      |
+| Stockage des certificats | `/root/traefik/letsencrypt/acme.json` (hôte) | —                           |
+| Découverte des services  | provider Docker, `exposedByDefault=false`    | label `traefik.enable=true` |
+
+Relever cette configuration, ici ou sur un autre serveur :
+
+```bash
+docker inspect traefik --format '{{range .Config.Cmd}}{{println .}}{{end}}'
+docker inspect traefik --format '{{range $k,$v := .NetworkSettings.Networks}}{{println $k}}{{end}}'
+```
+
+### 2.1 Conventions respectées
+
+- **Pas de redirection HTTP → HTTPS globale** sur ce Traefik : chaque service
+  déclare un routeur `<nom>-http` sur l'entrypoint `web` associé à un middleware
+  `redirectscheme`. MyTDFRIK suit la même convention, avec ses propres
+  middlewares plutôt qu'en réutilisant le `redirect-to-https` d'une autre pile —
+  qui disparaîtrait si celle-ci était arrêtée.
+- **Les noms de routeurs, services et middlewares sont globaux** à l'instance
+  Traefik. Tous ceux de cette pile sont préfixés `mytdfrik-`, ce qui évite
+  d'écraser le routeur d'une autre application et la collision avec
+  `api@internal`, le dashboard interne de Traefik.
+- **Aucun port publié** : `docker compose ... ps` ne doit afficher aucun mapping
+  pour cette pile. Postgres et Redis restent sur le réseau `backend`, déclaré
+  `internal`, donc sans route vers l'extérieur.
+
+### 2.2 Ce que la pile ne fait pas
+
+Elle ne démarre ni ne redémarre Traefik, ne modifie pas sa configuration et ne
+touche pas à `acme.json`. Les certificats des deux sous-domaines sont demandés
+par Traefik lorsqu'il découvre les nouveaux routeurs, et s'ajoutent à ceux des
+autres applications.
+
+---
+
+## 3. Récupération du code
 
 Le VPS se sert du dépôt de déploiement `git.digitechafricaltd.com`, dont la
 branche `main` porte la version à mettre en production. Le développement, lui,
@@ -87,7 +148,7 @@ git push deploy <branche-validée>:main
 
 ---
 
-## 3. Configuration
+## 4. Configuration
 
 ```bash
 cp docker/.env.prod.example docker/.env.prod
@@ -101,7 +162,6 @@ Valeurs **obligatoires** à renseigner :
 | ------------------- | -------------------------------------------------------------------------------------------- |
 | `WEB_DOMAIN`        | Domaine du front (ex. `support.techdifrik.com`)                                              |
 | `API_DOMAIN`        | Domaine de l'API (ex. `api.techdifrik.com`)                                                  |
-| `ACME_EMAIL`        | Contact Let's Encrypt (alertes d'expiration)                                                 |
 | `POSTGRES_PASSWORD` | Mot de passe Postgres — `openssl rand -hex 24`                                               |
 | `REDIS_PASSWORD`    | Mot de passe Redis — `openssl rand -hex 24`                                                  |
 | `JWT_SECRET`        | ≥ 32 caractères — `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"` |
@@ -120,7 +180,7 @@ dans le fichier.
 
 ---
 
-## 4. Premier déploiement
+## 5. Premier déploiement
 
 ```bash
 chmod +x scripts/*.sh
@@ -147,11 +207,11 @@ curl -I http://support.techdifrik.com           # 308 vers https
 ```
 
 L'obtention des certificats prend 10 à 60 secondes au premier lancement. En cas
-d'échec : `docker logs mytdfrik-traefik-prod | grep -i acme`.
+d'échec : `docker logs traefik | grep -i acme`.
 
 ---
 
-## 5. Mises à jour
+## 6. Mises à jour
 
 ```bash
 cd /opt/mytdfrik
@@ -173,7 +233,7 @@ Options disponibles :
 
 ---
 
-## 6. Images pré-construites (GHCR)
+## 7. Images pré-construites (GHCR)
 
 La CI publie `api` et `web` sur GitHub Container Registry à chaque merge sur
 `main`. Pour les consommer plutôt que de construire sur le VPS :
@@ -197,7 +257,7 @@ WEB_IMAGE=ghcr.io/hubersondev/mytdfrik/web:latest
 
 ---
 
-## 7. Exploitation
+## 8. Exploitation
 
 ```bash
 C="docker compose --env-file docker/.env.prod -f docker/docker-compose.prod.yml"
@@ -247,63 +307,76 @@ docker compose --env-file docker/.env.prod -f docker/docker-compose.prod.yml \
 
 ---
 
-## 8. Architecture réseau
+## 9. Architecture réseau
 
 ```
-                 Internet
-                    │  :80 / :443
-             ┌──────▼───────┐
-             │   Traefik    │  TLS Let's Encrypt, HTTP -> HTTPS
-             └──┬────────┬──┘
-      réseau edge│        │
-        ┌────────▼─┐  ┌───▼──────┐
-        │   web    │  │   api    │
-        │ Next.js  │  │ NestJS   │
-        │  :3001   │  │  :3000   │
-        └──────────┘  └───┬──────┘
-                          │ réseau backend (internal, sans accès Internet)
-                   ┌──────┴──────┐
-              ┌────▼────┐   ┌────▼────┐
-              │ postgres│   │  redis  │
-              └─────────┘   └─────────┘
+                         Internet
+                            │  :80 / :443
+                    ┌───────▼────────┐
+                    │    traefik     │  conteneur partagé du VPS
+                    │  (hors pile)   │  TLS Let's Encrypt (TLS-ALPN)
+                    └──┬──────────┬──┘
+      réseau « traefik »│         │      … et les autres applications
+                        │         │        (GitLab, n8n, Hyperion…)
+              ┌─────────▼┐   ┌────▼─────┐
+              │   web    │   │   api    │
+              │ Next.js  │   │  NestJS  │
+              │  :3001   │   │  :3000   │
+              └──────────┘   └────┬─────┘
+                                  │ réseau « backend » (internal)
+                           ┌──────┴──────┐
+                      ┌────▼────┐   ┌────▼────┐
+                      │ postgres│   │  redis  │
+                      └─────────┘   └─────────┘
 ```
 
 Choix de sécurité appliqués :
 
-- Dashboard Traefik désactivé (contrairement au compose de dev).
-- Postgres et Redis sur un réseau `internal`, aucun port publié sur l'hôte.
+- Postgres et Redis sur un réseau `internal`, aucun port publié sur l'hôte ; ils
+  ne sont joignables que par `api` et `migrate`.
 - Redis protégé par mot de passe (`requirepass`).
 - Conteneurs applicatifs en utilisateur non root (`app`).
-- HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` posés par
-  le middleware Traefik `mytdfrik-secure`, en complément de Helmet côté API.
+- HSTS, `X-Content-Type-Options`, `X-Frame-Options` et `Referrer-Policy` posés
+  par les middlewares `mytdfrik-api-secure` et `mytdfrik-web-secure`, en
+  complément de Helmet côté API.
 - Swagger automatiquement désactivé quand `NODE_ENV=production`.
 - CORS restreint à `https://$WEB_DOMAIN`.
+- `trust proxy` activé côté NestJS : le rate limiting et les journaux voient
+  l'IP réelle du client, et non celle de Traefik.
 
-Le conteneur Traefik porte les alias DNS `$WEB_DOMAIN` et `$API_DOMAIN` sur le
-réseau `edge` : le rendu serveur de Next.js atteint l'API par le réseau Docker
-interne, sans dépendre du hairpin NAT du VPS.
-
----
-
-## 9. Diagnostic
-
-| Symptôme                                     | Piste                                                                                                      |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Certificat invalide / `TRAEFIK DEFAULT CERT` | DNS non propagé ou port 80 fermé — `docker logs mytdfrik-traefik-prod \| grep -i acme`                     |
-| 404 sur les deux domaines                    | Labels non lus : vérifier que les conteneurs sont sur `mytdfrik-prod_edge`                                 |
-| API en `restarting`                          | Validation Joi en échec (`JWT_SECRET` trop court, `DATABASE_URL` absent) — `docker logs mytdfrik-api-prod` |
-| `migrate` en erreur                          | Postgres injoignable ou migration en conflit — `docker logs mytdfrik-migrate-prod`                         |
-| Front chargé mais appels API en échec        | `NEXT_PUBLIC_API_URL` figée sur `localhost` : reconstruire l'image `web`                                   |
-| Erreur CORS dans la console navigateur       | `CORS_ORIGINS` ≠ `https://$WEB_DOMAIN`                                                                     |
-| `429 Too Many Requests`                      | Throttler NestJS (60 req/min/IP) — attendu derrière un proxy partagé                                       |
-
-Limite ACME : 5 échecs par heure et par domaine. Pour mettre au point sans
-consommer le quota, ajoutez temporairement au service `traefik` :
-`--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory`
+Le rendu serveur de Next.js appelle l'API par son URL publique
+(`https://$API_DOMAIN`), donc par l'IP publique du VPS. Si cette boucle ne passe
+pas — NAT sans hairpin —, décommenter `extra_hosts` sur le service `web` dans
+`docker-compose.prod.yml` : la résolution se fera alors vers la passerelle de
+l'hôte, où Traefik écoute.
 
 ---
 
-## 10. Points ouverts
+## 10. Diagnostic
+
+| Symptôme                                     | Piste                                                                                                             |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Certificat invalide / `TRAEFIK DEFAULT CERT` | DNS non propagé ou port 443 injoignable — `docker logs traefik \| grep -i acme`                                   |
+| 404 sur les deux domaines                    | Labels non lus : vérifier que `api` et `web` sont bien sur le réseau `traefik` (`docker network inspect traefik`) |
+| Un autre site du VPS devient inaccessible    | Collision de noms de routeurs : tous les nôtres doivent être préfixés `mytdfrik-`                                 |
+| API en `restarting`                          | Validation Joi en échec (`JWT_SECRET` trop court, `DATABASE_URL` absent) — `docker logs mytdfrik-api-prod`        |
+| `migrate` en erreur                          | Postgres injoignable ou migration en conflit — `docker logs mytdfrik-migrate-prod`                                |
+| Front chargé mais appels API en échec        | `NEXT_PUBLIC_API_URL` figée sur `localhost` : reconstruire l'image `web`                                          |
+| Erreur CORS dans la console navigateur       | `CORS_ORIGINS` ≠ `https://$WEB_DOMAIN`                                                                            |
+| `429 Too Many Requests`                      | Throttler NestJS (60 req/min/IP)                                                                                  |
+
+Le dashboard Traefik du serveur (`http://<IP>:8080`) liste les routeurs
+découverts : c'est le moyen le plus rapide de vérifier que `mytdfrik-web` et
+`mytdfrik-api` sont bien enregistrés et sans erreur.
+
+Limite ACME : 5 échecs par heure et par domaine. Le resolver `letsencrypt` est
+partagé avec les autres applications du VPS — épuiser son quota les affecterait
+lors d'un renouvellement. D'où la règle : ne déployer qu'une fois les DNS
+propagés et vérifiés.
+
+---
+
+## 11. Points ouverts
 
 - **ClamAV** n'est pas déployé : le scan antivirus des pièces jointes est
   simulé (`ANTIVIRUS_SIMULATED_DELAY_MS`). Le conteneur consomme ~1,5 Go de RAM ;

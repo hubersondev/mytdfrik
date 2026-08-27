@@ -52,6 +52,12 @@ if [ "$PERMS" != "600" ] && [ "$PERMS" != "400" ]; then
   chmod 600 "$ENV_FILE"
 fi
 
+# La pile se greffe sur le Traefik du VPS : son réseau doit préexister.
+TRAEFIK_NETWORK="$(grep -E '^TRAEFIK_NETWORK=' "$ENV_FILE" | cut -d= -f2-)"
+TRAEFIK_NETWORK="${TRAEFIK_NETWORK:-traefik}"
+docker network inspect "$TRAEFIK_NETWORK" >/dev/null 2>&1 \
+  || fail "Le réseau Docker '$TRAEFIK_NETWORK' est introuvable — Traefik tourne-t-il sur ce serveur ? (docker network ls)"
+
 COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 
 # Vérifie que l'interpolation aboutit (domaines, mots de passe obligatoires).
@@ -65,7 +71,7 @@ fi
 
 if [ "$DO_PULL" = true ]; then
   grep -qE '^API_IMAGE=' "$ENV_FILE" && grep -qE '^WEB_IMAGE=' "$ENV_FILE" \
-    || fail "--pull exige API_IMAGE et WEB_IMAGE dans $ENV_FILE (cf. docs/DEPLOIEMENT-VPS.md §6)."
+    || fail "--pull exige API_IMAGE et WEB_IMAGE dans $ENV_FILE (cf. docs/DEPLOIEMENT-VPS.md §7)."
   log "Récupération des images depuis le registre"
   "${COMPOSE[@]}" pull
 else
@@ -86,8 +92,8 @@ if [ "$DO_SEED" = true ]; then
 fi
 
 # ------------------------------ Nettoyage -----------------------------------
-log "Suppression des images orphelines"
-docker image prune -f >/dev/null
+# Pas de `docker image prune` ici : le VPS héberge d'autres piles, et la purge
+# est globale au démon. À lancer manuellement, en connaissance de cause.
 
 # ------------------------------ Rapport -------------------------------------
 log "État des services"

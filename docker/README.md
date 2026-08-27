@@ -4,13 +4,13 @@ Ce dossier rassemble les fichiers de définition des environnements Docker (dev 
 
 ## Fichiers
 
-| Fichier                      | Description                                                                               |
-| ---------------------------- | ----------------------------------------------------------------------------------------- |
-| `docker-compose.yml`         | Environnement de développement local (Postgres + Redis + ClamAV + Traefik + api + web).   |
-| `.env.example`               | Variables d'environnement à copier en `.env` local.                                       |
-| `docker-compose.prod.yml`    | Production sur VPS : Traefik + Let's Encrypt, migrations automatiques, réseau data privé. |
-| `.env.prod.example`          | Variables de production à copier en `.env.prod` **sur le VPS** (jamais commité).          |
-| `docker-compose.staging.yml` | (à créer) — Environnement de staging, dérivé du compose de production.                    |
+| Fichier                      | Description                                                                                           |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `docker-compose.yml`         | Environnement de développement local (Postgres + Redis + ClamAV + Traefik + api + web).               |
+| `.env.example`               | Variables d'environnement à copier en `.env` local.                                                   |
+| `docker-compose.prod.yml`    | Production sur VPS : se greffe sur le Traefik du serveur, migrations automatiques, réseau data privé. |
+| `.env.prod.example`          | Variables de production à copier en `.env.prod` **sur le VPS** (jamais commité).                      |
+| `docker-compose.staging.yml` | (à créer) — Environnement de staging, dérivé du compose de production.                                |
 
 > **Déploiement en production :** procédure complète dans
 > [`docs/DEPLOIEMENT-VPS.md`](../docs/DEPLOIEMENT-VPS.md). Résumé :
@@ -65,5 +65,5 @@ Le premier démarrage de ClamAV télécharge ~250 Mo de signatures. Le healthche
 ## Notes
 
 - **Production sur VPS** : `docker-compose.prod.yml` embarque PostgreSQL et Redis en conteneurs sur un réseau `internal`. Pour des bases managées (Scaleway, CDC §11.9.4), renseigner `DATABASE_URL` / `REDIS_URL` dans `.env.prod` et commenter les services correspondants.
-- **Traefik en prod** : Let's Encrypt (challenge HTTP-01), redirection HTTP → HTTPS, dashboard désactivé.
+- **Traefik en prod** : la pile ne démarre pas de reverse proxy. Elle rejoint le réseau du Traefik déjà présent sur le VPS (resolver `letsencrypt` en TLS-ALPN) et publie ses routeurs par labels, tous préfixés `mytdfrik-` pour ne pas entrer en collision avec les autres applications du serveur.
 - **Sécurité dev** : le dashboard Traefik est exposé `--api.insecure=true` — uniquement en local.
