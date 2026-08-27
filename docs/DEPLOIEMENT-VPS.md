@@ -62,14 +62,28 @@ sudo ufw enable
 
 ## 2. Récupération du code
 
+Le VPS se sert du dépôt de déploiement `git.digitechafricaltd.com`, dont la
+branche `main` porte la version à mettre en production. Le développement, lui,
+continue sur GitHub (`hubersondev/mytdfrik`) : une branche y est revue par PR,
+puis publiée ici.
+
 ```bash
 sudo mkdir -p /opt/mytdfrik && sudo chown "$USER:$USER" /opt/mytdfrik
-git clone https://github.com/hubersondev/mytdfrik.git /opt/mytdfrik
+git clone https://git.digitechafricaltd.com/others/mytdfrik.git /opt/mytdfrik
 cd /opt/mytdfrik
 ```
 
+`scripts/deploy.sh` fait un `git pull --ff-only` sur la branche courante : le
+clone doit donc rester sur `main`.
+
 Dépôt privé : utilisez un déploiement par clé SSH (`ssh-keygen -t ed25519`, puis
-ajout de la clé publique dans _Settings → Deploy keys_ du dépôt).
+ajout de la clé publique dans les _Deploy keys_ du dépôt).
+
+Publication d'une nouvelle version depuis votre poste :
+
+```bash
+git push deploy <branche-validée>:main
+```
 
 ---
 
