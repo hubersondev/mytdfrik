@@ -45,6 +45,19 @@ if grep -q 'CHANGE_ME' "$ENV_FILE"; then
   fail "$ENV_FILE contient encore des valeurs 'CHANGE_ME'. Renseignez-les avant de déployer."
 fi
 
+# POSTGRES_PASSWORD et REDIS_PASSWORD sont injectés dans des URL de connexion
+# (DATABASE_URL, REDIS_URL). TypeORM les passe à decodeURIComponent : un « % »
+# ou tout caractère réservé fait échouer l'analyse de l'URL avec un message
+# trompeur (« Unable to open file … URI malformed »). On refuse en amont.
+for secret_var in POSTGRES_PASSWORD REDIS_PASSWORD; do
+  secret_value="$(grep -E "^${secret_var}=" "$ENV_FILE" | cut -d= -f2-)"
+  case "$secret_value" in
+    '') ;; # absent : base ou cache externe, l'URL complète est fournie à la main
+    *[!A-Za-z0-9._~-]*)
+      fail "${secret_var} contient un caractère réservé aux URL (% @ / : # ? …). N'utilisez que [A-Za-z0-9._~-], par exemple \`openssl rand -hex 24\`, puis supprimez le volume de données concerné — le mot de passe est figé au premier démarrage." ;;
+  esac
+done
+
 # Le fichier contient des secrets : on refuse des droits trop permissifs.
 PERMS="$(stat -c '%a' "$ENV_FILE")"
 if [ "$PERMS" != "600" ] && [ "$PERMS" != "400" ]; then
