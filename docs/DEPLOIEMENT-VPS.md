@@ -165,15 +165,17 @@ Valeurs **obligatoires** à renseigner :
 | `POSTGRES_PASSWORD` | Mot de passe Postgres — `openssl rand -hex 24`                                               |
 | `REDIS_PASSWORD`    | Mot de passe Redis — `openssl rand -hex 24`                                                  |
 | `JWT_SECRET`        | ≥ 32 caractères — `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"` |
-| `SMTP_PASSWORD`     | Mot de passe d'application Zoho — envoi réel des courriels (cf. annexe B)                    |
+| `RESEND_API_KEY`    | Clé API Resend — envoi réel des courriels (cf. annexe B)                                     |
 | `ADMIN_BOOTSTRAP_*` | Premier compte administrateur                                                                |
 
 Le script de déploiement refuse de démarrer tant qu'un `CHANGE_ME` subsiste
 dans le fichier.
 
-> **Courriels.** Le transport retenu est le SMTP Zoho, déjà pré-rempli dans
-> `.env.prod.example` ; seul `SMTP_PASSWORD` reste à renseigner. Configuration
-> côté Zoho en [annexe B](#annexe-b--transport-des-courriels-via-zoho-mail).
+> **Courriels.** Le transport retenu est Resend ; seule `RESEND_API_KEY` reste à
+> renseigner. Vérification du domaine et enregistrements DNS en
+> [annexe B](#annexe-b--transport-des-courriels-via-resend). `SMTP_HOST` doit
+> rester vide : le code donne la priorité au SMTP, une valeur ici court-circuite
+> Resend.
 > Sans `SMTP_HOST` ni `RESEND_API_KEY`, l'API se contente de journaliser les
 > messages : aucun utilisateur ne pourra activer son compte ni réinitialiser son
 > mot de passe.
@@ -461,64 +463,94 @@ par heure et par domaine, et un déploiement lancé trop tôt consomme ce quota.
 
 ---
 
-## Annexe B — Transport des courriels via Zoho Mail
-
-Le domaine `techdifrik.com` a sa messagerie chez Zoho (`MX = mx.zoho.com`), avec
-SPF et DKIM déjà publiés. Envoyer les courriels transactionnels par ce même
-canal évite d'authentifier un second expéditeur et donne une délivrabilité
-correcte dès le premier envoi.
+## Annexe B — Transport des courriels via Resend
 
 L'API choisit son transport dans cet ordre : **SMTP** si `SMTP_HOST` est défini,
 sinon **Resend** si `RESEND_API_KEY` l'est, sinon **journalisation seule**.
+Resend étant retenu, `SMTP_HOST` doit rester vide — une valeur, même héritée
+d'un ancien `.env.prod`, le court-circuiterait silencieusement.
 
-### B.1 Préparation côté Zoho
+### B.1 Vérification du domaine dans Resend
 
-1. **Créer une boîte réelle** `no-reply@techdifrik.com` (Admin Console →
-   Utilisateurs). Un alias ne convient pas : Zoho refuse d'expédier depuis une
-   adresse qui n'est pas celle du compte authentifié.
-2. **Activer l'accès SMTP/IMAP** pour ce compte (Paramètres → Courrier → IMAP).
-3. **Générer un mot de passe d'application** si la double authentification est
-   active (Mon compte → Sécurité → Mots de passe d'application). Le mot de passe
-   de session est refusé par le serveur SMTP.
+Dans le tableau de bord Resend : **Domains → Add Domain**, saisir
+`techdifrik.com`. Resend affiche alors les enregistrements à créer. Ils portent
+tous sur le sous-domaine `send` ou sur `*._domainkey` :
+
+| Type    | Nom (chez Hostinger)     | Valeur                                               |
+| ------- | ------------------------ | ---------------------------------------------------- |
+| `MX`    | `send`                   | `feedback-smtp.<région>.amazonses.com` (priorité 10) |
+| `TXT`   | `send`                   | `v=spf1 include:amazonses.com ~all`                  |
+| `CNAME` | `<sélecteur>._domainkey` | `<sélecteur>.dkim.amazonses.com`                     |
+
+Les valeurs exactes, dont les trois sélecteurs DKIM, sont propres à votre
+domaine : les recopier depuis l'écran Resend, sans les modifier.
+
+> **Aucun conflit avec Zoho.** Le SPF de la racine
+> (`v=spf1 include:zohomail.com ~all`) et les MX `mx.zoho.com` ne sont pas
+> touchés : Resend pose son SPF et son MX de retour sur `send.techdifrik.com`.
+> La réception des courriels continue de passer par Zoho. Ne jamais ajouter un
+> second enregistrement SPF à la racine — deux SPF sur un même nom invalident
+> l'authentification.
+
+La marche à suivre pour créer ces entrées chez Hostinger est la même qu'en
+[annexe A](#annexe-a--créer-les-enregistrements-dns-chez-hostinger) : champ
+**Nom** sans le domaine (`send`, pas `send.techdifrik.com`).
+
+Une fois le statut passé à **Verified** dans Resend, générer une clé API
+(**API Keys → Create**, permission _Sending access_) et la reporter dans
+`docker/.env.prod`.
 
 ### B.2 Configuration dans `docker/.env.prod`
 
 ```bash
-SMTP_HOST=smtp.zoho.com
-SMTP_PORT=465
-SMTP_USER=no-reply@techdifrik.com
-SMTP_PASSWORD=<mot de passe d'application>
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
 MAIL_FROM_ADDRESS=no-reply@techdifrik.com
 MAIL_FROM_NAME=MyTDFRIK · TECHDIFRIK
+# SMTP_HOST doit rester vide ou commenté
 ```
 
-`MAIL_FROM_ADDRESS` doit être **identique** à `SMTP_USER` : toute autre valeur
-déclenche un `553 Relaying disallowed`.
-
-Le port 465 correspond au TLS implicite, activé automatiquement par l'API. Le
-port 587 (STARTTLS) fonctionne également. Pour un compte Zoho européen, l'hôte
-serait `smtp.zoho.eu` — ici les MX en `.com` indiquent la région américaine.
+`MAIL_FROM_ADDRESS` doit appartenir au domaine vérifié. Tant que la
+vérification n'est pas terminée, seule `onboarding@resend.dev` fonctionne, et
+uniquement vers l'adresse du compte Resend — inutilisable en production.
 
 ### B.3 Vérification après déploiement
 
 ```bash
 # Le transport retenu est annoncé au démarrage de l'API
 docker logs mytdfrik-api-prod | grep MailService
-# Attendu : MailService prêt en mode SMTP (smtp.zoho.com:465, from ...)
+# Attendu : MailService prêt en mode Resend (from "MyTDFRIK · TECHDIFRIK" <no-reply@techdifrik.com>)
 ```
 
+Si la ligne indique `mode SMTP`, c'est qu'un `SMTP_HOST` traîne dans le fichier
+d'environnement. Si elle indique `mode DEV (log only)`, ni l'un ni l'autre n'est
+défini et aucun courriel ne partira.
+
 Test de bout en bout : déclencher un « mot de passe oublié » depuis le portail,
-puis vérifier la réception. En cas d'échec, les erreurs SMTP sont journalisées
-par l'API.
+puis contrôler la livraison dans **Resend → Emails**, qui journalise chaque
+envoi avec son statut (`delivered`, `bounced`, `complained`).
 
-| Erreur Zoho                 | Cause                                                       |
-| --------------------------- | ----------------------------------------------------------- |
-| `535 Authentication Failed` | Mot de passe d'application manquant ou SMTP non activé      |
-| `553 Relaying disallowed`   | `MAIL_FROM_ADDRESS` ≠ `SMTP_USER`                           |
-| Connexion en timeout        | Port 465 sortant bloqué par l'hébergeur du VPS — tester 587 |
+| Erreur Resend                    | Cause                                                                      |
+| -------------------------------- | -------------------------------------------------------------------------- |
+| `403 The domain is not verified` | Vérification DNS inachevée, ou `MAIL_FROM_ADDRESS` hors du domaine vérifié |
+| `422 Invalid from field`         | Format d'expéditeur incorrect                                              |
+| `401 API key is invalid`         | Clé révoquée, tronquée, ou sans permission d'envoi                         |
+| Aucun envoi, aucune erreur       | Transport en mode DEV ou SMTP — vérifier la ligne `MailService`            |
 
-### B.4 Repli sur Resend
+### B.4 Repli sur le SMTP Zoho
 
-Vider ou commenter `SMTP_HOST` (le SMTP est prioritaire), renseigner
-`RESEND_API_KEY`, et vérifier que `MAIL_FROM_ADDRESS` appartient à un domaine
-vérifié dans Resend. Redémarrer l'API pour appliquer.
+Le domaine étant déjà authentifié chez Zoho, ce repli ne demande aucune
+configuration DNS. Renseigner dans `docker/.env.prod` :
+
+```bash
+SMTP_HOST=smtp.zoho.com
+SMTP_PORT=465
+SMTP_USER=no-reply@techdifrik.com
+SMTP_PASSWORD=<mot de passe d'application>
+MAIL_FROM_ADDRESS=no-reply@techdifrik.com   # doit être identique à SMTP_USER
+```
+
+Le SMTP prend automatiquement le pas sur Resend. Prérequis côté Zoho : une
+véritable boîte `no-reply@techdifrik.com` (un alias est refusé à l'expédition),
+l'accès SMTP activé, et un mot de passe d'application si la double
+authentification est en place. Le port 465 correspond au TLS implicite, activé
+automatiquement par l'API ; 587 fonctionne aussi, en STARTTLS.
