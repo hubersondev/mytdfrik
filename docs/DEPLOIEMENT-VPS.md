@@ -472,9 +472,16 @@ d'un ancien `.env.prod`, le court-circuiterait silencieusement.
 
 ### B.1 Vérification du domaine dans Resend
 
-Dans le tableau de bord Resend : **Domains → Add Domain**, saisir
-`techdifrik.com`. Resend affiche alors les enregistrements à créer. Ils portent
-tous sur le sous-domaine `send` ou sur `*._domainkey` :
+> **Déjà fait.** `techdifrik.com` est vérifié dans Resend depuis la mise en
+> ligne du site vitrine : `send.techdifrik.com` porte le MX de retour
+> `feedback-smtp.us-east-1.amazonses.com` et son TXT SPF (constat du
+> 2026-08-28). Aucun enregistrement DNS à créer pour MyTDFRIK — il suffit de
+> générer une clé API et de passer à [B.2](#b2-configuration-dans-dockerenvprod).
+> La section ci-dessous documente la procédure pour un autre domaine.
+
+Dans le tableau de bord Resend : **Domains → Add Domain**, saisir le domaine.
+Resend affiche alors les enregistrements à créer. Ils portent tous sur le
+sous-domaine `send` ou sur `*._domainkey` :
 
 | Type    | Nom (chez Hostinger)     | Valeur                                               |
 | ------- | ------------------------ | ---------------------------------------------------- |
@@ -498,7 +505,9 @@ La marche à suivre pour créer ces entrées chez Hostinger est la même qu'en
 
 Une fois le statut passé à **Verified** dans Resend, générer une clé API
 (**API Keys → Create**, permission _Sending access_) et la reporter dans
-`docker/.env.prod`.
+`docker/.env.prod`. Créer une clé dédiée à MyTDFRIK plutôt que réutiliser celle
+du site vitrine : elle pourra être révoquée sans interrompre l'autre service, et
+les envois restent distingables dans le journal Resend.
 
 ### B.2 Configuration dans `docker/.env.prod`
 
