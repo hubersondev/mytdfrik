@@ -53,7 +53,12 @@ USER app
 
 EXPOSE 3001
 
+# 127.0.0.1 et non localhost : dans un conteneur Alpine, « localhost » résout
+# aussi en ::1, or Next écoute sur 0.0.0.0 (IPv4 seul) — busybox wget tente
+# l'IPv6, échoue, et Traefik écarte tout conteneur qui n'est pas « healthy ».
+# La sonde vise /api/health, qui ne dépend pas de l'API NestJS : une panne du
+# backend ne doit pas faire retirer le front des routeurs de Traefik.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- http://localhost:3001/ || exit 1
+  CMD wget -q --spider http://127.0.0.1:3001/api/health || exit 1
 
 CMD ["node", "apps/web/server.js"]

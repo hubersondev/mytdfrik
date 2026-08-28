@@ -52,7 +52,10 @@ USER app
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:3000/api/v1/health || exit 1
+# 127.0.0.1 et non localhost : dans un conteneur Alpine, « localhost » résout
+# aussi en ::1, or Node écoute sur 0.0.0.0 (IPv4 seul) — busybox wget tente
+# l'IPv6, échoue, et Traefik écarte tout conteneur qui n'est pas « healthy ».
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -q --spider http://127.0.0.1:3000/api/v1/health || exit 1
 
 CMD ["node", "dist/main.js"]
